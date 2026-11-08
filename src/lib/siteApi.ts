@@ -49,6 +49,7 @@ export async function callSiteFunction<T>(body: Record<string, unknown>): Promis
 }
 
 export async function fetchSiteData(): Promise<SiteData> {
+  if (!supabase) throw new Error('Не настроено подключение к базе данных сайта');
   const [matches, news, players, gallery, products, merchMode, settings] = await Promise.all([
     supabase.from('matches').select('*').order('position', { ascending: true }),
     supabase.from('news').select('*').order('position', { ascending: true }),

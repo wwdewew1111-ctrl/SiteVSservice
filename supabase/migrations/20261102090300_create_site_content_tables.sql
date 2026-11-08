@@ -130,9 +130,7 @@ CREATE POLICY "public_read_merch_settings" ON merch_settings FOR SELECT TO anon,
 DROP POLICY IF EXISTS "public_read_site_settings" ON site_settings;
 CREATE POLICY "public_read_site_settings" ON site_settings FOR SELECT TO anon, authenticated USING (true);
 
-INSERT INTO admin_config (key, value)
-VALUES ('admin_password_sha256', '29cd6b6ce8c090ca5b1a2da6cd995cd9e33e993ae400c03260911d9a46a467cc')
-ON CONFLICT (key) DO NOTHING;
+-- Configure admin_password_sha256 privately after provisioning; do not seed a shared password.
 
 INSERT INTO news (id, title, date, tag, excerpt, content, cover) VALUES
 ('news-1', 'KAB6ANbl выходит в плей-офф регионального турнира', '2026-10-28', 'Турнир',

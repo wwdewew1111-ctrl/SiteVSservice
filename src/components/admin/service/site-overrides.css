@@ -1,0 +1,15 @@
+#card, .service-tool .season-card { box-sizing: border-box; }
+.service-tool { overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.service-tool [hidden] { display: none !important; }
+.service-tool .tabs, .service-tool .bar { width: 100%; }
+.service-tool .tab { color: rgb(var(--c-text)); background: rgb(var(--c-elevated)); border-color: rgb(var(--c-border)); }
+.service-tool .tab.active { color: white; background: rgb(var(--c-accent)); border-color: rgb(var(--c-accent)); }
+.service-tool .field { color: rgb(var(--c-text)); background: rgb(var(--c-elevated)); border-color: rgb(var(--c-border)); }
+.service-tool .field::placeholder { color: rgb(var(--c-muted)); }
+.service-tool .btn { color: rgb(var(--c-text)); background: rgb(var(--c-card)); border-color: rgb(var(--c-border)); }
+.service-tool .btn.primary { color: white; background: rgb(var(--c-accent)); border-color: rgb(var(--c-accent)); }
+.service-tool .status, .service-tool .preview-hint { color: rgb(var(--c-muted)); }
+.service-tool .status.error { color: #e33b4a; }
+.service-card-scroll { width: 100%; overflow-x: auto; }
+.service-tool #seasonResults { align-items: flex-start; overflow-x: auto; max-width: 100%; }
+.service-tool .season-item { min-width: 850px; }

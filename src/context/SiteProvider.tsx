@@ -16,6 +16,25 @@ import {
 import { SiteStatus } from '@/components/ui/SiteStatus';
 import type { SiteData } from '@/types';
 
+const FALLBACK_SITE_DATA: SiteData = {
+  matches: [],
+  news: [],
+  players: [],
+  gallery: [],
+  merch: { mode: 'comingSoon', products: [] },
+  settings: {
+    heroTitle: 'KAB6ANbl ESPORTS',
+    heroSubtitle: 'Киберспортивная команда по CS2',
+    heroImage: '',
+    socials: { vk: '', telegram: '', twitch: '' },
+    partners: [],
+  },
+};
+
+export function getFallbackSiteData(): SiteData {
+  return FALLBACK_SITE_DATA;
+}
+
 const SESSION_EXPIRED = 'Сессия входа истекла. Выйдите из админки и войдите снова.';
 const SAVE_FAILED = 'Не удалось сохранить изменения. Проверьте интернет и попробуйте ещё раз.';
 
@@ -33,19 +52,25 @@ function describeSaveError(error: unknown): string {
 
 export function SiteProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<SiteData | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    setLoadError(false);
+    setLoadError(null);
     fetchSiteData()
       .then((next) => {
         if (active) setData(next);
       })
-      .catch(() => {
-        if (active) setLoadError(true);
+      .catch((error: unknown) => {
+        if (!active) return;
+        if (error instanceof Error && error.message.includes('Не настроено')) {
+          setData(getFallbackSiteData());
+          setLoadError('config');
+        } else {
+          setLoadError('data');
+        }
       });
     return () => {
       active = false;
@@ -53,6 +78,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, [loadAttempt]);
 
   useEffect(() => {
+    if (!supabase) return;
     const channel = supabase
       .channel('public-matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
@@ -68,7 +94,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       })
       .subscribe();
     return () => {
-      void supabase.removeChannel(channel);
+      void supabase?.removeChannel(channel);
     };
   }, []);
 
@@ -195,7 +221,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   );
 
   if (!value) {
-    return <SiteStatus failed={loadError} onRetry={retryLoad} />;
+    return <SiteStatus failed={Boolean(loadError)} reason={loadError ?? undefined} onRetry={retryLoad} />;
   }
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>;

@@ -2,11 +2,11 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/home/Hero';
 import { MatchesSection } from '@/components/home/MatchesSection';
-import { EseaPublicSection } from '@/components/EseaStats';
 import { NewsSection } from '@/components/home/NewsSection';
 import { RosterSection } from '@/components/home/RosterSection';
 import { GallerySection } from '@/components/home/GallerySection';
 import { MerchSection } from '@/components/home/MerchSection';
+import { EseaPublicSection } from '@/components/EseaStats';
 
 export function HomePage() {
   return (
@@ -15,9 +15,9 @@ export function HomePage() {
       <main>
         <Hero />
         <MatchesSection />
-        <EseaPublicSection />
         <NewsSection />
         <RosterSection />
+        <EseaPublicSection />
         <GallerySection />
         <MerchSection />
       </main>

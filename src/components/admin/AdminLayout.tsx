@@ -10,6 +10,7 @@ import { GalleryAdmin } from '@/components/admin/gallery/GalleryAdmin';
 import { MerchAdmin } from '@/components/admin/merch/MerchAdmin';
 import { SettingsAdmin } from '@/components/admin/SettingsAdmin';
 import { EseaAdminTab } from '@/components/EseaStats';
+import { ServiceAdmin } from '@/components/admin/service/ServiceAdmin';
 
 const TABS = [
   { id: 'matches', label: 'Матчи', Icon: Swords },
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'roster', label: 'Состав CS2', Icon: Users },
   { id: 'gallery', label: 'Галерея', Icon: Images },
   { id: 'merch', label: 'Мерч', Icon: ShoppingBag },
+  { id: 'service', label: 'Сервис', Icon: BarChart3 },
   { id: 'esea', label: 'Статистика ESEA', Icon: BarChart3 },
   { id: 'settings', label: 'Настройки сайта', Icon: Settings },
 ] as const;
@@ -89,6 +91,7 @@ export function AdminLayout({ saveError, onLogout }: AdminLayoutProps) {
           {tab === 'roster' && <RosterAdmin />}
           {tab === 'gallery' && <GalleryAdmin />}
           {tab === 'merch' && <MerchAdmin />}
+          {tab === 'service' && <ServiceAdmin />}
           {tab === 'esea' && <EseaAdminTab />}
           {tab === 'settings' && <SettingsAdmin />}
         </main>

@@ -151,6 +151,7 @@ export function parseMatchId(input: string): string | null {
 }
 
 export async function fetchEseaState(): Promise<EseaState> {
+  if (!supabase) throw new Error('Не настроено подключение к базе данных сайта');
   const { data, error } = await supabase.from('esea_state').select('key, value');
   if (error) throw new Error('Не удалось загрузить статистику ESEA');
   const seasons = data?.find((row) => row.key === 'seasons')?.value;

@@ -64,7 +64,7 @@ SELECT cron.schedule(
   '* * * * *',
   $job$
   SELECT net.http_post(
-    url := 'https://primufyovxzkyvlbqjjg.supabase.co/functions/v1/site-admin',
+    url := 'https://dydsgyjwjbrcymkvzrji.supabase.co/functions/v1/site-admin',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'x-cron-secret', (SELECT value FROM esea_secrets WHERE key = 'cron_secret')

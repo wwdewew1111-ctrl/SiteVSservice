@@ -2,7 +2,8 @@ const FACEIT_API = "https://open.faceit.com/data/v4";
 
 const GUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
-export type Json = Record<string, any>;
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+export type Json = { [key: string]: JsonValue };
 
 export class RequestError extends Error {
   constructor(message: string, readonly status: number) {
@@ -32,7 +33,10 @@ export async function faceitGet(path: string, apiKey: string): Promise<Json> {
     data = raw;
   }
   console.error("FACEIT request failed", { path, status: response.status, data });
-  const detail = (data as Json)?.errors?.[0]?.message ?? (data as Json)?.message ?? "";
+  const dataObject = data && typeof data === "object" ? data as Record<string, JsonValue> : null;
+  const errors = dataObject?.errors;
+  const firstError = Array.isArray(errors) && errors[0] && typeof errors[0] === "object" ? errors[0] as Record<string, JsonValue> : null;
+  const detail = (typeof firstError?.message === "string" ? firstError.message : "") || (typeof dataObject?.message === "string" ? dataObject.message : "");
   if (response.status === 401 || response.status === 403) {
     throw new RequestError("FACEIT не принял ключ API. Проверьте ключ в настройках.", 502);
   }

@@ -5,9 +5,9 @@ import { ThemeToggle } from './ThemeToggle';
 
 const NAV_LINKS = [
   { href: '#matches', label: 'Матчи' },
-  { href: '#statistics', label: 'Статистика' },
   { href: '#news', label: 'Новости' },
   { href: '#roster', label: 'Состав' },
+  { href: '#statistics', label: 'Статистика' },
   { href: '#gallery', label: 'Галерея' },
   { href: '#merch', label: 'Мерч' },
 ];

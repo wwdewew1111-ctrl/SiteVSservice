@@ -397,6 +397,22 @@ async function readSecret(key: string): Promise<string> {
   return String(data?.value ?? "").trim();
 }
 
+async function serviceFaceit(body: Record<string, unknown>): Promise<Response> {
+  const matchId = typeof body.matchId === "string" && /^1-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.matchId) ? body.matchId : "";
+  const nickname = typeof body.nickname === "string" ? body.nickname.trim() : "";
+  let path: string;
+  if ((body.resource === "match" || body.resource === "stats") && matchId) {
+    path = `/matches/${encodeURIComponent(matchId)}${body.resource === "stats" ? "/stats" : ""}`;
+  } else if (body.resource === "player" && nickname.length > 0 && nickname.length <= 100) {
+    path = `/players?nickname=${encodeURIComponent(nickname)}`;
+  } else {
+    throw new RequestError("Некорректный запрос к FACEIT.", 400);
+  }
+  const apiKey = await readSecret(FACEIT_KEY_NAME);
+  if (!apiKey) throw new RequestError("Сначала сохраните ключ FACEIT в разделе «Статистика ESEA».", 400);
+  return json({ ok: true, data: await faceitGet(path, apiKey) });
+}
+
 async function runStep(label: string, task: () => Promise<unknown>): Promise<void> {
   try {
     await task();
@@ -459,6 +475,9 @@ Deno.serve(async (req: Request) => {
         return await reorderRows(body.table, body.ids);
       case "cron_tick":
         return await cronTick(req);
+      case "service_faceit":
+        await requireAdmin(body.token);
+        return await serviceFaceit(body);
       case "esea_save":
         await requireAdmin(body.token);
         return await saveEsea(body);
