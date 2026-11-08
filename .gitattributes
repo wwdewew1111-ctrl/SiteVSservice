@@ -1,0 +1,5 @@
+* text=auto
+*.sh text eol=lf
+reg-ru-site/assets/*.js binary
+reg-ru-site/assets/*.css binary
+reg-ru-site/index.html binary

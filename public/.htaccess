@@ -1,15 +1,5 @@
-# REG.RU static hosting
-# Build command: npm ci && npm run build
-# Publish directory: dist
-# Required build-time variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-
-Options -MultiViews
-RewriteEngine On
-RewriteBase /
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.html [QSA,L]
-
+# REG.RU static hosting: Apache SPA fallback
+# Requires mod_rewrite and permission to use .htaccess rewrite directives.
 Options -MultiViews
 RewriteEngine On
 RewriteBase /

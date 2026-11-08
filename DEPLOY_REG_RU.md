@@ -1,39 +1,36 @@
-# KAB6ANbl ESPORTS — REG.RU deployment
+# KAB6ANbl ESPORTS — установка на REG.RU
 
-## Recommended REG.RU setup
+## Быстрая установка готовой сборки из GitHub
 
-This repository is a Vite/React single-page application. Deploy the generated static files, not the source directory.
+Для виртуального хостинга достаточно Git и стандартных команд shell. Node.js, npm и sudo на сервере не нужны: готовая сборка хранится в `reg-ru-site/` в этом репозитории.
 
-### Build
+Выполните в shell REG.RU:
 
 ```bash
-npm ci
-npm run build
+cd "$HOME" && W=$(mktemp -d "${TMPDIR:-/tmp}/site-installer.XXXXXXXX") && git clone --depth 1 --branch main https://github.com/wwdewew1111-ctrl/SiteVSservice.git "$W/repo" && sh "$W/repo/install-reg-ru.sh"
 ```
 
-The publish directory is:
+По умолчанию используется `$HOME/www/kabanyesports.online`. Если панель REG.RU указывает другую физическую папку сайта, передайте её последним аргументом, например:
 
-```text
-dist
+```bash
+sh "$W/repo/install-reg-ru.sh" "$HOME/www/другой-домен"
 ```
 
-On ordinary hosting, upload the **contents** of `dist/` to the site's document root (usually `www/`). The included `public/.htaccess` is copied into `dist/` and enables SPA fallback for `/admin` and other client-side routes.
+Установщик выводит содержимое папки и запрашивает `YES`. Перед копированием он сохраняет её содержимое в отдельную папку `$HOME/site-backup-...`, путь выводится в консоль. Совпадающие имена будут перезаписаны, остальные файлы не удаляются. Убедитесь, что свободного места достаточно. Не запускайте установщик для неверной папки и проверьте `.htaccess` перед заменой, если он содержит важные настройки.
 
-### Build-time environment variables
+Скопируется только содержимое `reg-ru-site/`, включая `.htaccess`; исходники, `.git`, `.env` и `node_modules` в каталог сайта не копируются. После установки проверьте главную страницу и прямой переход на `/admin`. Для SPA-маршрутов Apache должен разрешать `.htaccess` и `mod_rewrite`. HTTPS требует действующего SSL-сертификата.
 
-Create these variables in REG.RU's build/deploy settings, or create a local `.env` before running the build:
+## Обновление готовой сборки для GitHub
+
+Если меняете исходный код, соберите новую версию на компьютере с Node.js 20.19+ или 22.12+ и отправьте изменённые файлы `reg-ru-site/` в GitHub. Регулярная сборка на сервере не выполняется автоматически.
+
+Для сборки необходимы переменные окружения:
 
 ```text
 VITE_SUPABASE_URL=https://dydsgyjwjbrcymkvzrji.supabase.co
-VITE_SUPABASE_ANON_KEY=<Supabase Publishable/anon public key>
+VITE_SUPABASE_ANON_KEY=<Supabase publishable/anon public key>
 ```
 
-`VITE_SUPABASE_ANON_KEY` is required at build time because Vite embeds `VITE_*` variables into the browser bundle. Never use a Supabase `service_role` or secret key in this project.
+Выполните `npm ci`, `npm run typecheck`, `npm run build`, затем замените содержимое `reg-ru-site/` содержимым `dist/`, включая скрытый `.htaccess`. Vite встраивает `VITE_*` в публичные файлы, поэтому используйте только публичный ключ; никогда не используйте `service_role`, Supabase secret key или FACEIT-ключ. Если меняются URL или публичный ключ Supabase, сборку также нужно пересоздать.
 
-### If REG.RU does not build from GitHub
-
-Build locally with the variables above, then upload the contents of `dist/` through the REG.RU file manager or SFTP. Do not upload `.env`, `node_modules`, or the source `.git` directory.
-
-### Supabase Edge Functions
-
-The existing FACEIT/admin server functions remain in `supabase/functions/site-admin`. They must stay deployed in the Supabase project `dydsgyjwjbrcymkvzrji`; static REG.RU hosting does not run Deno Edge Functions.
+Существующий проект Supabase и его данные не изменяются. Серверные функции FACEIT/admin по-прежнему работают в Supabase Edge Functions; статический хостинг их не запускает.
