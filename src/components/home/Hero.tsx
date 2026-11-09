@@ -5,7 +5,7 @@ export function Hero() {
   const { heroTitle, heroSubtitle, heroImage } = useSite().data.settings;
   const [firstWord, ...restWords] = heroTitle.split(' ');
   const accentWords = restWords.join(' ');
-  const marqueeItem = 'KAB6ANbl ESPORTS • CS2 • Сила в команде • ';
+  const marqueeItem = 'КАБАНЫ ЕСПОРТС • CS2 • Сила в команде • ';
 
   return (
     <section
