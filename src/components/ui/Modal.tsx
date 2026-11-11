@@ -7,9 +7,10 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   widthClass?: string;
+  stickyClose?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, widthClass = 'max-w-2xl' }: ModalProps) {
+export function Modal({ open, onClose, title, children, widthClass = 'max-w-2xl', stickyClose = false }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
@@ -43,7 +44,7 @@ export function Modal({ open, onClose, title, children, widthClass = 'max-w-2xl'
           type="button"
           onClick={onClose}
           aria-label="Закрыть"
-          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/70 text-white transition hover:bg-accent"
+          className={`${stickyClose ? 'sticky float-right -mb-9' : 'absolute'} right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full bg-black/70 text-white transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
         >
           <X className="h-5 w-5" />
         </button>
