@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { SiteContext, type SiteActions, type SiteContextValue } from './siteStore';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { SiteContext, type SectionStatus, type SiteActions, type SiteContextValue, type SiteSection } from './siteStore';
 import { getAdminToken } from '@/lib/adminAuth';
-import { ApiError, deleteRow, fetchSiteData, reorderRows, upsertRow } from '@/lib/siteApi';
+import { ApiError, deleteRow, fetchSiteData, fetchSiteSection, reorderRows, upsertRow } from '@/lib/siteApi';
 import { supabase } from '@/lib/supabase';
 import {
   matchFromRow,
@@ -51,31 +52,82 @@ function describeSaveError(error: unknown): string {
 }
 
 export function SiteProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<SiteData | null>(null);
+  const isAdmin = useLocation().pathname === '/admin';
+  const [data, setData] = useState<SiteData>(getFallbackSiteData);
+  const [adminLoaded, setAdminLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [sectionStatus, setSectionStatus] = useState<Record<SiteSection, SectionStatus>>({
+    settings: 'idle', matches: 'idle', archive: 'idle', news: 'idle', players: 'idle', gallery: 'idle', merch: 'idle',
+  });
+  const sectionStatusRef = useRef(sectionStatus);
+  const pending = useRef<Partial<Record<SiteSection, Promise<void>>>>({});
+  const matchChanges = useRef(new Map<string, MatchRow | null>());
+  const generation = useRef(0);
+
+  const updateSectionStatus = useCallback((section: SiteSection, status: SectionStatus) => {
+    sectionStatusRef.current = { ...sectionStatusRef.current, [section]: status };
+    setSectionStatus(sectionStatusRef.current);
+  }, []);
+
+  const loadSection = useCallback((section: SiteSection): Promise<void> => {
+    if (pending.current[section]) return pending.current[section];
+    if (sectionStatusRef.current[section] === 'loaded') return Promise.resolve();
+    const requestGeneration = generation.current;
+    updateSectionStatus(section, 'loading');
+    const request = fetchSiteSection(section).then((result) => {
+      if (requestGeneration !== generation.current) return;
+      setData((current) => {
+        if (section === 'settings') return { ...current, settings: result.settings! };
+        if (section === 'matches' || section === 'archive') {
+          const archived = section === 'archive';
+          let matches = [...current.matches.filter((match) => match.isArchived !== archived), ...(result.matches ?? [])];
+          for (const [id, row] of matchChanges.current) {
+            matches = matches.filter((match) => match.id !== id);
+            if (row) matches.push(matchFromRow(row));
+          }
+          return { ...current, matches };
+        }
+        return { ...current, ...result };
+      });
+      updateSectionStatus(section, 'loaded');
+    }).catch(() => {
+      if (requestGeneration === generation.current) updateSectionStatus(section, 'error');
+    }).finally(() => {
+      if (pending.current[section] === request) delete pending.current[section];
+    });
+    pending.current[section] = request;
+    return request;
+  }, [updateSectionStatus]);
 
   useEffect(() => {
-    let active = true;
-    setLoadError(null);
-    fetchSiteData()
-      .then((next) => {
-        if (active) setData(next);
-      })
-      .catch((error: unknown) => {
+    if (isAdmin) {
+      let active = true;
+      generation.current += 1;
+      pending.current = {};
+      setAdminLoaded(false);
+      sectionStatusRef.current = { settings: 'idle', matches: 'idle', archive: 'idle', news: 'idle', players: 'idle', gallery: 'idle', merch: 'idle' };
+      setSectionStatus(sectionStatusRef.current);
+      setLoadError(null);
+      fetchSiteData().then((next) => {
         if (!active) return;
-        if (error instanceof Error && error.message.includes('Не настроено')) {
-          setData(getFallbackSiteData());
-          setLoadError('config');
-        } else {
-          setLoadError('data');
-        }
+        setData(() => {
+          let matches = next.matches;
+          for (const [id, row] of matchChanges.current) {
+            matches = matches.filter((match) => match.id !== id);
+            if (row) matches.push(matchFromRow(row));
+          }
+          return { ...next, matches };
+        });
+        setAdminLoaded(true);
+      }).catch((error: unknown) => {
+        if (active) setLoadError(error instanceof Error && error.message.includes('Не настроено') ? 'config' : 'data');
       });
-    return () => {
-      active = false;
-    };
-  }, [loadAttempt]);
+      return () => { active = false; };
+    }
+    void loadSection('settings');
+  }, [isAdmin, loadAttempt, loadSection]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -84,13 +136,17 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const id = String((payload.old as Partial<MatchRow>).id ?? '');
-          if (id) setData((current) => (current ? { ...current, matches: current.matches.filter((m) => m.id !== id) } : current));
+          if (id) {
+            matchChanges.current.set(id, null);
+            setData((current) => ({ ...current, matches: current.matches.filter((m) => m.id !== id) }));
+          }
           return;
         }
         const row = payload.new as MatchRow;
         if (typeof row.id !== 'string') return;
+        matchChanges.current.set(row.id, row);
         const match = matchFromRow(row);
-        setData((current) => (current ? { ...current, matches: upsert(current.matches, match) } : current));
+        setData((current) => ({ ...current, matches: upsert(current.matches, match) }));
       })
       .subscribe();
     return () => {
@@ -215,12 +271,12 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo<SiteContextValue | null>(
-    () => (data ? { data, saveError, actions } : null),
-    [data, saveError, actions],
+  const value = useMemo<SiteContextValue>(
+    () => ({ data, saveError, actions, sectionStatus, loadSection }),
+    [data, saveError, actions, sectionStatus, loadSection],
   );
 
-  if (!value) {
+  if (isAdmin && !adminLoaded) {
     return <SiteStatus failed={Boolean(loadError)} reason={loadError ?? undefined} onRetry={retryLoad} />;
   }
 

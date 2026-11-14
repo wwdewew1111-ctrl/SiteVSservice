@@ -15,6 +15,7 @@ import {
   type SettingsRow,
 } from '@/lib/siteMapping';
 import type { SiteData } from '@/types';
+import type { SiteSection } from '@/context/siteStore';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly data?: unknown) {
@@ -46,6 +47,53 @@ export async function callSiteFunction<T>(body: Record<string, unknown>): Promis
     throw new ApiError(payload?.error ?? 'Не удалось выполнить действие. Попробуйте ещё раз.', response.status, payload);
   }
   return payload as T;
+}
+
+
+export async function fetchSiteSection(section: SiteSection): Promise<Partial<SiteData>> {
+  if (!supabase) throw new Error('Не настроено подключение к базе данных сайта');
+
+  switch (section) {
+    case 'settings': {
+      const { data, error } = await supabase.from('site_settings').select('*').eq('id', 'main').maybeSingle();
+      if (error || !data) throw new Error('Не удалось загрузить настройки сайта');
+      return { settings: settingsFromRow(data as SettingsRow) };
+    }
+    case 'merch': {
+      const { data: merchMode, error: modeError } = await supabase.from('merch_settings').select('id, mode').eq('id', 'main').maybeSingle();
+      if (modeError || !merchMode) throw new Error('Не удалось загрузить настройки мерча');
+      const mode = (merchMode as MerchModeRow).mode;
+      if (mode !== 'shop') return { merch: { mode, products: [] } };
+      const { data, error } = await supabase.from('merch_products').select('*').order('position', { ascending: true });
+      if (error) throw error;
+      return { merch: { mode, products: (data as ProductRow[]).map(productFromRow) } };
+    }
+    case 'matches': {
+      const { data, error } = await supabase.from('matches').select('*').eq('is_archived', false).order('position', { ascending: true });
+      if (error) throw error;
+      return { matches: (data as MatchRow[]).map(matchFromRow) };
+    }
+    case 'archive': {
+      const { data, error } = await supabase.from('matches').select('*').eq('is_archived', true).order('position', { ascending: true });
+      if (error) throw error;
+      return { matches: (data as MatchRow[]).map(matchFromRow) };
+    }
+    case 'news': {
+      const { data, error } = await supabase.from('news').select('*').order('position', { ascending: true });
+      if (error) throw error;
+      return { news: (data as NewsRow[]).map(newsFromRow) };
+    }
+    case 'players': {
+      const { data, error } = await supabase.from('players').select('*').order('position', { ascending: true });
+      if (error) throw error;
+      return { players: (data as PlayerRow[]).map(playerFromRow) };
+    }
+    case 'gallery': {
+      const { data, error } = await supabase.from('gallery_photos').select('*').order('position', { ascending: true });
+      if (error) throw error;
+      return { gallery: (data as GalleryRow[]).map(photoFromRow) };
+    }
+  }
 }
 
 export async function fetchSiteData(): Promise<SiteData> {

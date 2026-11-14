@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Swords } from 'lucide-react';
 import { useSite } from '@/context/siteStore';
+import { useLazySection } from '@/context/useLazySection';
+import { SectionStatus } from '@/components/ui/SectionStatus';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { Modal } from '@/components/ui/Modal';
 import { fetchEseaState, getActiveSeason, playerKd, type EseaMatch, type EseaState, type PlayerStat } from '@/services/eseaService';
@@ -75,6 +77,7 @@ function PlayerMatch({ match, stats }: { match: EseaMatch; stats: PlayerStat }) 
 
 export function RosterSection() {
   const { data } = useSite();
+  const { ref, status, retry } = useLazySection('players');
   const [selected, setSelected] = useState<Player | null>(null);
   const [state, setState] = useState<EseaState | null>(null);
   const [error, setError] = useState(false);
@@ -97,10 +100,10 @@ export function RosterSection() {
   }).sort((a, b) => b.match.date.localeCompare(a.match.date)) : [];
 
   return (
-    <section id="roster" className="scroll-mt-20 border-y border-border bg-elevated/50 py-20 sm:py-28">
+    <section ref={ref} id="roster" className="min-h-96 scroll-mt-20 border-y border-border bg-elevated/50 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading eyebrow="Состав по CS2" title="Наша команда" />
-        {data.players.length === 0 ? (
+        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : data.players.length === 0 ? (
           <p className="text-muted">Состав пока не добавлен.</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -21,10 +21,15 @@ export interface SiteActions {
   reorderProducts: (products: MerchProduct[]) => Promise<boolean>;
 }
 
+export type SiteSection = 'settings' | 'matches' | 'archive' | 'news' | 'players' | 'gallery' | 'merch';
+export type SectionStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
 export interface SiteContextValue {
   data: SiteData;
   saveError: string | null;
   actions: SiteActions;
+  sectionStatus: Record<SiteSection, SectionStatus>;
+  loadSection: (section: SiteSection) => Promise<void>;
 }
 
 export const SiteContext = createContext<SiteContextValue | null>(null);

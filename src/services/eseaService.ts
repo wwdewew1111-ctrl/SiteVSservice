@@ -23,6 +23,14 @@ export interface PlayerStat {
   rating: number;
 }
 
+export interface EseaMatch {
+  id: string;
+  opponent: string;
+  date: string;
+  score: string;
+  players: PlayerStat[];
+}
+
 export interface EseaSeason {
   id: string;
   name: string;
@@ -32,6 +40,7 @@ export interface EseaSeason {
   isArchived: boolean;
   teamStats: TeamStats;
   players: PlayerStat[];
+  matches?: EseaMatch[];
 }
 
 export interface EseaConfig {

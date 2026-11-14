@@ -12,12 +12,12 @@ export function Hero() {
       id="top"
       className="relative isolate flex min-h-[calc(100svh-4rem)] items-center overflow-hidden bg-ink-950 text-white"
     >
-      <img
+      {heroImage ? <img
         src={heroImage}
         alt=""
         fetchPriority="high"
         className="absolute inset-0 -z-20 h-full w-full object-cover opacity-45"
-      />
+      /> : <div className="absolute inset-0 -z-20 bg-ink-950" />}
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink-950 via-ink-950/80 to-ink-950/20" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/50" />
       <div className="absolute inset-0 -z-10 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.035)_0px,rgba(255,255,255,0.035)_1px,transparent_1px,transparent_4px)]" />

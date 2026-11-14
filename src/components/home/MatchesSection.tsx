@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { CalendarClock, ExternalLink, Shield, Trophy } from 'lucide-react';
 import { useSite } from '@/context/siteStore';
+import { useLazySection } from '@/context/useLazySection';
+import { SectionStatus } from '@/components/ui/SectionStatus';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { formatMatchDateTime, isMatchFinished, matchUnitLabel, scoreToneClass } from '@/lib/format';
 import { DEFAULT_TEAM_LOGO } from '@/lib/teamLogo';
@@ -14,15 +16,20 @@ const TABS: { value: MatchTab; label: string }[] = [
 ];
 
 export function MatchesSection() {
-  const { data } = useSite();
+  const { data, sectionStatus, loadSection } = useSite();
   const [tab, setTab] = useState<MatchTab>('active');
+  const { ref, status, retry } = useLazySection('matches');
+  const currentStatus = tab === 'archive' ? sectionStatus.archive : status;
+  useEffect(() => {
+    if (tab === 'archive' && sectionStatus.archive === 'idle') void loadSection('archive');
+  }, [tab, sectionStatus.archive, loadSection]);
 
   const visibleMatches = data.matches
     .filter((match) => (tab === 'archive' ? match.isArchived : !match.isArchived))
     .sort((a, b) => Number(b.phase === 'live') - Number(a.phase === 'live'));
 
   return (
-    <section id="matches" className="scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="matches" className="min-h-80 scroll-mt-20 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading
           eyebrow="Календарь"
@@ -50,7 +57,9 @@ export function MatchesSection() {
           })}
         </div>
 
-        {visibleMatches.length === 0 ? (
+        {currentStatus !== 'loaded' ? (
+          <SectionStatus status={currentStatus} onRetry={tab === 'archive' ? () => void loadSection('archive') : retry} />
+        ) : visibleMatches.length === 0 ? (
           <p className="text-muted">
             {tab === 'archive' ? 'В архиве пока пусто.' : 'Ближайших матчей пока нет. Загляните позже.'}
           </p>
@@ -122,8 +131,12 @@ function MatchCard({ match }: { match: Match }) {
 }
 
 function ScoreBlock({ match }: { match: Match }) {
-  const team = match.teamScore ?? 0;
-  const opponent = match.opponentScore ?? 0;
+  const currentMap = match.format === 'bo1' ? match.maps.find((map) => map.inProgress) ?? (match.phase === 'finished' ? match.maps[0] : undefined) : undefined;
+  const team = currentMap?.ours ?? match.teamScore;
+  const opponent = currentMap?.theirs ?? match.opponentScore;
+  if (team === null || opponent === null) {
+    return <p className="text-center text-xs text-muted">Счёт недоступен</p>;
+  }
 
   return (
     <div className="flex flex-col items-center gap-1">

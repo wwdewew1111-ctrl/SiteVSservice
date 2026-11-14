@@ -55,9 +55,7 @@ function diffClass(diff: number): string {
 }
 
 function ratingClass(rating: number): string {
-  if (rating < 0.95) return 'text-red-500';
-  if (rating < 1.06) return 'text-muted';
-  return 'text-green-500';
+  return rating < 1.06 ? 'text-muted' : 'text-green-500';
 }
 
 function nextSeasonTag(tag: string): string {
@@ -70,6 +68,7 @@ export function EseaPublicSection() {
   const [loadError, setLoadError] = useState(false);
   const [view, setView] = useState<'active' | 'archive'>('active');
   const [archiveId, setArchiveId] = useState<string | null>(null);
+  const [matchSelection, setMatchSelection] = useState<{ seasonId: string; matchId: string } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('rating');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -92,16 +91,20 @@ export function EseaPublicSection() {
   const season: EseaSeason | undefined =
     view === 'active' ? active : archived.find((item) => item.id === archiveId) ?? archived[0];
 
+  const selectedMatch = season && matchSelection && season.id === matchSelection.seasonId
+    ? season.matches?.find((match) => match.id === matchSelection.matchId)
+    : undefined;
+
   const rows = useMemo(() => {
     if (!season) return [];
     const getValue = SORT_VALUES[sortKey];
-    return [...season.players].sort((a, b) => {
+    return [...(selectedMatch ? selectedMatch.players ?? [] : season.players)].sort((a, b) => {
       const left = getValue(a);
       const right = getValue(b);
       const result = typeof left === 'string' && typeof right === 'string' ? left.localeCompare(right) : Number(left) - Number(right);
       return sortDir === 'asc' ? result : -result;
     });
-  }, [season, sortKey, sortDir]);
+  }, [season, selectedMatch, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -166,7 +169,28 @@ export function EseaPublicSection() {
               <p className="text-muted">Сезон пока не создан.</p>
             ) : (
               <>
+                <div className="mb-6">
+                  <label htmlFor="esea-match" className="mb-2 block text-sm font-semibold text-muted">Статистика за матч</label>
+                  <select
+                    id="esea-match"
+                    value={selectedMatch?.id ?? ''}
+                    onChange={(event) => setMatchSelection(event.target.value ? { seasonId: season.id, matchId: event.target.value } : null)}
+                    className="input w-full max-w-md"
+                  >
+                    <option value="">Весь сезон</option>
+                    {(season.matches ?? []).map((match) => (
+                      <option key={match.id} value={match.id}>
+                        {match.date ? `${match.date} · ` : ''}vs {match.opponent}{match.score ? ` · ${match.score}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!season.matches?.length && <p className="mt-2 text-sm text-muted">Статистика матчей появится после синхронизации сезона.</p>}
+                </div>
                 <TeamOverview season={season} />
+                {selectedMatch && (
+                  <p className="mt-6 text-sm font-semibold text-muted">Статистика матча против {selectedMatch.opponent}{selectedMatch.score ? ` · ${selectedMatch.score}` : ''}</p>
+                )}
+                {selectedMatch && rows.length === 0 && <p className="mt-4 text-muted">Статистика игроков за этот матч недоступна.</p>}
 
                 <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card">
                   <table className="w-full min-w-[640px] border-collapse text-sm">

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useSite } from '@/context/siteStore';
+import { useLazySection } from '@/context/useLazySection';
+import { SectionStatus } from '@/components/ui/SectionStatus';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { NewsCard } from './NewsCard';
 import { NewsArticle } from './NewsArticle';
@@ -7,11 +9,12 @@ import { Modal } from '@/components/ui/Modal';
 
 export function NewsSection() {
   const { data } = useSite();
+  const { ref, status, retry } = useLazySection('news');
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = data.news.find((item) => item.id === activeId) ?? null;
 
   return (
-    <section id="news" className="scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="news" className="min-h-80 scroll-mt-20 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading
           eyebrow="Новости команды"
@@ -19,7 +22,7 @@ export function NewsSection() {
           description="Турниры, победы, составы и закулисье KAB6ANbl ESPORTS."
         />
 
-        {data.news.length === 0 ? (
+        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : data.news.length === 0 ? (
           <p className="text-muted">Новостей пока нет. Загляните позже.</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

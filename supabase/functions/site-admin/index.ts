@@ -137,7 +137,6 @@ async function reorderRows(table: unknown, ids: unknown): Promise<Response> {
 const FACEIT_KEY_NAME = "faceit_api_key";
 const CRON_SECRET_KEY = "cron_secret";
 const ESEA_SYNC_INTERVAL_MS = 15 * 60 * 1000;
-const LIVE_REFRESH_DELAY_MS = 30 * 1000;
 // HLTV 1.0 baseline kills-per-round; rating = KPR / baseline
 const RATING_KPR_BASELINE = 0.679;
 
@@ -234,6 +233,22 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+type PlayerTotal = { maps: number; kills: number; deaths: number; rounds: number; adr: number; hs: number };
+
+function playerStats(player: Json, faceitNick: string, total: PlayerTotal): Json {
+  const kpr = total.rounds > 0 ? total.kills / total.rounds : 0;
+  return {
+    ...player,
+    faceitNick,
+    maps: total.maps,
+    kills: total.kills,
+    deaths: total.deaths,
+    adr: round1(total.adr / total.maps),
+    hsPercent: round1(total.hs / total.maps),
+    rating: Number((kpr / RATING_KPR_BASELINE).toFixed(2)),
+  };
+}
+
 async function syncEsea(): Promise<Response> {
   const { data: secret, error: secretError } = await supabase
     .from("esea_secrets")
@@ -292,13 +307,17 @@ async function syncEsea(): Promise<Response> {
   let losses = 0;
   let roundDiff = 0;
   const results: string[] = [];
-  const playerTotals = new Map<string, { maps: number; kills: number; deaths: number; rounds: number; adr: number; hs: number }>();
+  const playerTotals = new Map<string, PlayerTotal>();
+  const matchStats: Json[] = [];
 
   for (const match of seasonMatches) {
     const stats = await faceitGet(`/matches/${String(match.match_id)}/stats`, apiKey);
     const rounds = (Array.isArray(stats.rounds) ? stats.rounds : []) as Json[];
     let ourMaps = 0;
     let oppMaps = 0;
+    const matchTotals = new Map<string, PlayerTotal>();
+    const mapScores: string[] = [];
+    let opponent = "";
 
     for (const round of rounds) {
       const teams = (Array.isArray(round.teams) ? round.teams : []) as Json[];
@@ -308,6 +327,8 @@ async function syncEsea(): Promise<Response> {
 
       const ourScore = Number(ours.team_stats?.["Final Score"] ?? 0);
       const oppScore = Number(opp.team_stats?.["Final Score"] ?? 0);
+      opponent ||= String(opp.team_name ?? opp.name ?? "");
+      mapScores.push(`${ourScore}:${oppScore}`);
       roundDiff += ourScore - oppScore;
       if (ourScore > oppScore) ourMaps++;
       if (oppScore > ourScore) oppMaps++;
@@ -315,16 +336,47 @@ async function syncEsea(): Promise<Response> {
       for (const player of (Array.isArray(ours.players) ? ours.players : []) as Json[]) {
         const key = idToNick.get(String(player.player_id ?? "")) ?? String(player.nickname ?? "").toLowerCase();
         const playerStats = (player.player_stats ?? {}) as Json;
-        const total = playerTotals.get(key) ?? { maps: 0, kills: 0, deaths: 0, rounds: 0, adr: 0, hs: 0 };
-        total.maps += 1;
-        total.kills += Number(playerStats.Kills ?? 0);
-        total.deaths += Number(playerStats.Deaths ?? 0);
-        total.rounds += Number(playerStats.Rounds ?? ourScore + oppScore);
-        total.adr += Number(playerStats.ADR ?? 0);
-        total.hs += Number(playerStats["Headshots %"] ?? 0);
-        playerTotals.set(key, total);
+        for (const totals of [playerTotals, matchTotals]) {
+          const total = totals.get(key) ?? { maps: 0, kills: 0, deaths: 0, rounds: 0, adr: 0, hs: 0 };
+          total.maps += 1;
+          total.kills += Number(playerStats.Kills ?? 0);
+          total.deaths += Number(playerStats.Deaths ?? 0);
+          total.rounds += Number(playerStats.Rounds ?? ourScore + oppScore);
+          total.adr += Number(playerStats.ADR ?? 0);
+          total.hs += Number(playerStats["Headshots %"] ?? 0);
+          totals.set(key, total);
+        }
       }
     }
+
+    const factions = Object.values((match.teams ?? {}) as Record<string, Json>).filter((faction) => faction && typeof faction === "object");
+    let opponentFaction = factions.some((faction) => (faction.team_id ?? faction.faction_id) === teamId)
+      ? factions.find((faction) => (faction.team_id ?? faction.faction_id) !== teamId)
+      : undefined;
+    if (!opponentFaction?.name && !opponent) {
+      try {
+        const details = await faceitGet(`/matches/${encodeURIComponent(String(match.match_id))}`, apiKey);
+        const teams = Object.values((details.teams ?? {}) as Record<string, Json>);
+        if (teams.some((faction) => (faction.faction_id ?? faction.team_id) === teamId)) {
+          opponentFaction = teams.find((faction) => (faction.faction_id ?? faction.team_id) !== teamId);
+        }
+      } catch (error) {
+        console.error("FACEIT opponent lookup failed", { matchId: match.match_id, error });
+      }
+    }
+    const finishedAt = Number(match.finished_at ?? 0);
+    const matchPlayers = ((season.players ?? []) as Json[]).flatMap((player, index) => {
+      const faceitNick = rosterNicks[index];
+      const total = matchTotals.get(faceitNick.toLowerCase());
+      return total?.maps ? [playerStats(player, faceitNick, total)] : [];
+    });
+    matchStats.push({
+      id: String(match.match_id),
+      opponent: String(opponentFaction?.name || opponent || "Соперник"),
+      date: finishedAt > 0 ? new Date(finishedAt * 1000).toISOString().slice(0, 10) : "",
+      score: mapScores.length === 1 ? mapScores[0] : mapScores.length > 1 ? `${ourMaps}:${oppMaps}` : "",
+      players: matchPlayers,
+    });
 
     if (ourMaps > oppMaps) {
       wins++;
@@ -349,17 +401,7 @@ async function syncEsea(): Promise<Response> {
     if (!total || total.maps === 0) {
       return { ...player, faceitNick, maps: 0, kills: 0, deaths: 0, adr: 0, hsPercent: 0, rating: 0 };
     }
-    const kpr = total.rounds > 0 ? total.kills / total.rounds : 0;
-    return {
-      ...player,
-      faceitNick,
-      maps: total.maps,
-      kills: total.kills,
-      deaths: total.deaths,
-      adr: round1(total.adr / total.maps),
-      hsPercent: round1(total.hs / total.maps),
-      rating: Number((kpr / RATING_KPR_BASELINE).toFixed(2)),
-    };
+    return playerStats(player, faceitNick, total);
   });
 
   const updatedSeasons = seasons.map((item) =>
@@ -375,6 +417,7 @@ async function syncEsea(): Promise<Response> {
             roundDiff,
           },
           players,
+          matches: matchStats.reverse(),
         }
       : item,
   );
@@ -421,33 +464,29 @@ async function runStep(label: string, task: () => Promise<unknown>): Promise<voi
   }
 }
 
-async function runSyncTick(): Promise<void> {
-  try {
-    const apiKey = await readSecret(FACEIT_KEY_NAME);
-    const config = ((await readEseaState("config")) ?? {}) as Json;
-    const teamId = parseTeamGuid(config.teamId);
-    if (!apiKey || !teamId) return;
+async function runSyncTick(mode: "live" | "full"): Promise<void> {
+  const apiKey = await readSecret(FACEIT_KEY_NAME);
+  const config = ((await readEseaState("config")) ?? {}) as Json;
+  const teamId = parseTeamGuid(config.teamId);
+  if (!apiKey || !teamId) throw new Error("FACEIT API key or team ID is not configured");
 
-    const anchorMatchIds = Array.isArray(config.extraMatchIds) ? config.extraMatchIds.map(String) : [];
-    await runStep("Синхронизация матчей", () => syncTeamMatches(supabase, apiKey, teamId, "full", anchorMatchIds));
-    const lastSync = Number(config.lastSync ?? 0);
-    if (config.autoSync === true && Date.now() - lastSync > ESEA_SYNC_INTERVAL_MS) {
-      await runStep("Автообновление статистики ESEA", () => syncEsea());
-    }
-    await new Promise((resolve) => setTimeout(resolve, LIVE_REFRESH_DELAY_MS));
-    await runStep("Обновление live-матчей", () => syncTeamMatches(supabase, apiKey, teamId, "live"));
-  } catch (error) {
-    console.error("Sync tick failed", error);
+  const anchorMatchIds = Array.isArray(config.extraMatchIds) ? config.extraMatchIds.map(String) : [];
+  await syncTeamMatches(supabase, apiKey, teamId, mode, anchorMatchIds);
+  const lastSync = Number(config.lastSync ?? 0);
+  if (mode === "full" && config.autoSync === true && Date.now() - lastSync > ESEA_SYNC_INTERVAL_MS) {
+    await runStep("Автообновление статистики ESEA", () => syncEsea());
   }
 }
 
-async function cronTick(req: Request): Promise<Response> {
+async function cronTick(req: Request, body: Record<string, unknown>): Promise<Response> {
   const expected = await readSecret(CRON_SECRET_KEY);
   if (expected.length < 20 || req.headers.get("x-cron-secret") !== expected) {
     throw new RequestError("Доступ запрещён", 403);
   }
-  EdgeRuntime.waitUntil(runSyncTick());
-  return json({ ok: true, started: true });
+  const mode = body.mode ?? "full";
+  if (mode !== "live" && mode !== "full") throw new RequestError("Некорректный режим синхронизации", 400);
+  await runSyncTick(mode);
+  return json({ ok: true, mode });
 }
 
 Deno.serve(async (req: Request) => {
@@ -474,7 +513,7 @@ Deno.serve(async (req: Request) => {
         await requireAdmin(body.token);
         return await reorderRows(body.table, body.ids);
       case "cron_tick":
-        return await cronTick(req);
+        return await cronTick(req, body);
       case "service_faceit":
         await requireAdmin(body.token);
         return await serviceFaceit(body);

@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { ZoomIn } from 'lucide-react';
 import { useSite } from '@/context/siteStore';
+import { useLazySection } from '@/context/useLazySection';
+import { SectionStatus } from '@/components/ui/SectionStatus';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { Lightbox } from './Lightbox';
 
 export function GallerySection() {
   const { data } = useSite();
+  const { ref, status, retry } = useLazySection('gallery');
   const photos = data.gallery;
   const [index, setIndex] = useState<number | null>(null);
 
   return (
-    <section id="gallery" className="scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="gallery" className="min-h-80 scroll-mt-20 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading
           eyebrow="Галерея"
         />
 
-        {photos.length === 0 ? (
+        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : photos.length === 0 ? (
           <p className="text-muted">Фотографий пока нет.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">

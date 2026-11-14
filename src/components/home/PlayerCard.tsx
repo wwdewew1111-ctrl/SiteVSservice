@@ -1,8 +1,8 @@
 import type { Player } from '@/types';
 
-export function PlayerCard({ player }: { player: Player }) {
+export function PlayerCard({ player, onClick }: { player: Player; onClick: () => void }) {
   return (
-    <article className="group overflow-hidden rounded-xl border border-ink-800 bg-ink-950 text-white transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_20px_50px_-20px_rgba(255,30,30,0.6)]">
+    <button type="button" onClick={onClick} aria-label={`Статистика игрока ${player.nickname}`} className="group w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-950 text-left text-white transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_20px_50px_-20px_rgba(255,30,30,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
       <div className="relative aspect-[4/5] overflow-hidden">
         {player.photo ? (
           <img
@@ -31,6 +31,6 @@ export function PlayerCard({ player }: { player: Player }) {
           {player.role}
         </span>
       </div>
-    </article>
+    </button>
   );
 }

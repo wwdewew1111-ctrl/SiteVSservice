@@ -1,24 +1,26 @@
 import { useSite } from '@/context/siteStore';
+import { useLazySection } from '@/context/useLazySection';
+import { SectionStatus } from '@/components/ui/SectionStatus';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { ProductCard } from './ProductCard';
 
 export function MerchSection() {
   const { data } = useSite();
   const { mode, products } = data.merch;
+  const { ref, status, retry } = useLazySection('merch');
 
   return (
-    <section id="merch" className="scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="merch" className="scroll-mt-20 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading
           eyebrow="Мерч KAB6ANbl"
-          title={mode === 'shop' ? 'Фирменная линейка' : 'Скоро в продаже'}
+          title={status !== 'loaded' ? undefined : mode === 'shop' ? 'Фирменная линейка' : 'Скоро в продаже'}
           description="Джерси, худи и коврики в фирменных черно-красных цветах команды."
         />
 
-        {mode === 'shop' ? <ShopGrid /> : <ComingSoonBlock />}
-        {mode === 'shop' && products.length === 0 && (
+        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : mode !== 'shop' ? <ComingSoonBlock /> : products.length === 0 ? (
           <p className="text-muted">Товары скоро появятся в магазине.</p>
-        )}
+        ) : <ShopGrid />}
       </div>
     </section>
   );
