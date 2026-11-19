@@ -26,6 +26,21 @@ function formatForMapCount(count: number): MatchFormat {
   return count <= 3 ? "bo3" : "bo5";
 }
 
+function liveBo1Score(details: Json, teamId: string): { ours: number; theirs: number } | null {
+  const teams = details.teams as Record<string, Json | undefined> | null;
+  const results = details.results as Record<string, Json | undefined> | null;
+  const score = results?.score;
+  if (!teams?.faction1 || !teams.faction2 || !score) return null;
+  const faction1IsOurs = teams.faction1.faction_id === teamId;
+  const faction2IsOurs = teams.faction2.faction_id === teamId;
+  if (faction1IsOurs === faction2IsOurs) return null;
+  const first = score.faction1;
+  const second = score.faction2;
+  if (typeof first !== "number" || !Number.isSafeInteger(first) || first < 0 ||
+    typeof second !== "number" || !Number.isSafeInteger(second) || second < 0) return null;
+  return faction1IsOurs ? { ours: first, theirs: second } : { ours: second, theirs: first };
+}
+
 async function fetchMaps(matchId: string, teamId: string, apiKey: string): Promise<MapResult[]> {
   const stats = await faceitGet(`/matches/${encodeURIComponent(matchId)}/stats`, apiKey);
   const rounds = (Array.isArray(stats.rounds) ? stats.rounds : []) as Json[];
@@ -35,8 +50,8 @@ async function fetchMaps(matchId: string, teamId: string, apiKey: string): Promi
     const ours = teams.find((team) => team.team_id === teamId);
     const opponent = teams.find((team) => team.team_id !== teamId);
     if (!ours || !opponent) continue;
-    const ourValue = ours.team_stats?.["Final Score"];
-    const opponentValue = opponent.team_stats?.["Final Score"];
+    const ourValue = (ours.team_stats as Json | null)?.["Final Score"];
+    const opponentValue = (opponent.team_stats as Json | null)?.["Final Score"];
     if ((typeof ourValue !== "string" && typeof ourValue !== "number") ||
       (typeof opponentValue !== "string" && typeof opponentValue !== "number") ||
       String(ourValue).trim() === "" || String(opponentValue).trim() === "") continue;
@@ -45,7 +60,7 @@ async function fetchMaps(matchId: string, teamId: string, apiKey: string): Promi
     if (!Number.isSafeInteger(ourScore) || ourScore < 0 ||
       !Number.isSafeInteger(opponentScore) || opponentScore < 0) continue;
     maps.push({
-      map: String(round.round_stats?.Map ?? "Карта"),
+      map: String((round.round_stats as Json | null)?.Map ?? "Карта"),
       ours: ourScore,
       theirs: opponentScore,
       inProgress: false,
@@ -101,8 +116,7 @@ async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, 
     // The stats response does not identify whether its last map is currently being played.
     row.maps = maps;
     if (format === "bo1") {
-      // FACEIT's stats endpoint does not indicate whether a map is still live.
-      // Do not display a potentially stale completed map as the current round score.
+      // Use final map statistics only after the match ends; live scores are handled below.
       row.team_score = phase === "finished" ? maps[0].ours : null;
       row.opponent_score = phase === "finished" ? maps[0].theirs : null;
     } else {
@@ -121,6 +135,12 @@ async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, 
   } else {
     // Never turn an absent live score into 0:0 or carry over an upcoming match's stale score.
     Object.assign(row, { maps: [], team_score: null, opponent_score: null });
+  }
+  if (phase === "live" && format === "bo1") {
+    // The match details provide live round scores for BO1; /stats may not exist yet.
+    const score = liveBo1Score(details, teamId);
+    row.team_score = score?.ours ?? null;
+    row.opponent_score = score?.theirs ?? null;
   }
   if (typeof opponent.avatar === "string" && opponent.avatar) row.opponent_logo = opponent.avatar;
   if (phase === "finished") row.match_format = formatForMapCount(maps.length);
