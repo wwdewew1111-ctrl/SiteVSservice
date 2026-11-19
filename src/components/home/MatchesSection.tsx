@@ -34,7 +34,7 @@ export function MatchesSection() {
         <SectionHeading
           eyebrow="Календарь"
           title="Предстоящие матчи"
-          description="Ближайшие игры Ka6aHbl на турнирах. Следите за расписанием и поддерживайте команду."
+          description="Ближайшие игры КАБАНЫ ЕСПОРТС на турнирах. Следите за расписанием и поддерживайте команду."
         />
 
         <div role="tablist" aria-label="Список матчей" className="mb-10 inline-flex rounded-lg border border-border bg-elevated p-1">
@@ -80,7 +80,7 @@ function MatchCard({ match }: { match: Match }) {
   const finished = !live && isMatchFinished(match);
 
   return (
-    <article className="flex flex-col gap-6 rounded-xl border border-border bg-card p-6 transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_18px_40px_-18px_rgba(255,30,30,0.55)]">
+    <article className="flex min-w-0 flex-col gap-6 rounded-xl border border-border bg-card p-6 transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_18px_40px_-18px_rgba(255,30,30,0.55)]">
       <div className="flex items-center gap-3">
         <LogoBox src={match.tournamentLogo} fallback={<Trophy className="h-5 w-5 text-muted" />} />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wider text-accent">{match.tournament}</p>
@@ -90,7 +90,7 @@ function MatchCard({ match }: { match: Match }) {
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex min-w-0 flex-col items-center gap-2">
           <LogoBox src={match.teamLogo || DEFAULT_TEAM_LOGO} fallback={<Shield className="h-5 w-5 text-muted" />} />
-          <p className="w-full truncate text-center font-display text-sm text-text">Ka6aHbl</p>
+          <p className="w-full break-words text-center font-display text-sm text-text">КАБАНЫ ЕСПОРТС</p>
         </div>
         {finished || live ? (
           <ScoreBlock match={match} />

@@ -25,7 +25,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
     event.preventDefault();
     const nextErrors: PlayerErrors = {};
     if (!form.nickname.trim()) nextErrors.nickname = 'Введите никнейм';
-    if (!form.role.trim()) nextErrors.role = 'Укажите роль в CS2';
+    if (!form.role.trim()) nextErrors.role = form.isCoach ? 'Укажите должность' : 'Укажите роль в CS2';
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -39,7 +39,14 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6 p-6 sm:p-8">
-      <h2 className="pr-10 text-2xl text-text">{isNew ? 'Новый игрок' : 'Редактирование игрока'}</h2>
+      <h2 className="pr-10 text-2xl text-text">{isNew ? (form.isCoach ? 'Новый сотрудник' : 'Новый игрок') : `Редактирование ${form.isCoach ? 'сотрудника' : 'игрока'}`}</h2>
+
+      <Field label="Раздел команды">
+        <select value={form.isCoach ? 'staff' : 'players'} onChange={(event) => update('isCoach', event.target.value === 'staff')} className="input">
+          <option value="players">Состав по CS2</option>
+          <option value="staff">Staff</option>
+        </select>
+      </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Field label="Никнейм" error={errors.nickname}>
@@ -62,13 +69,13 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
         </Field>
       </div>
 
-      <Field label="Роль в CS2" error={errors.role} hint="Выберите из списка или напишите свою роль.">
+      <Field label={form.isCoach ? 'Должность' : 'Роль в CS2'} error={errors.role} hint={form.isCoach ? 'Например: тренер, менеджер или аналитик.' : 'Выберите из списка или напишите свою роль.'}>
         <input
           type="text"
-          list="cs2-roles"
+          list={form.isCoach ? undefined : 'cs2-roles'}
           value={form.role}
           onChange={(event) => update('role', event.target.value)}
-          placeholder="Например: AWPer / Снайпер"
+          placeholder={form.isCoach ? 'Например: Тренер' : 'Например: AWPer / Снайпер'}
           className="input"
         />
         <datalist id="cs2-roles">
@@ -78,24 +85,14 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
         </datalist>
       </Field>
 
-      <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-text">
-        <input
-          type="checkbox"
-          checked={form.isCoach}
-          onChange={(event) => update('isCoach', event.target.checked)}
-          className="h-4 w-4 accent-accent"
-        />
-        Это тренер команды
-      </label>
-
-      <ImageInput label="Фото игрока (необязательно)" value={form.photo} onChange={(value) => update('photo', value)} />
+      <ImageInput label={form.isCoach ? 'Фото сотрудника (необязательно)' : 'Фото игрока (необязательно)'} value={form.photo} onChange={(value) => update('photo', value)} />
 
       <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
         <button type="button" onClick={onCancel} className="btn-outline">
           Отмена
         </button>
         <button type="submit" className="btn-primary">
-          Сохранить игрока
+          {form.isCoach ? 'Сохранить сотрудника' : 'Сохранить игрока'}
         </button>
       </div>
     </form>

@@ -104,7 +104,7 @@ export function MatchForm({ initial, onSave, onCancel }: MatchFormProps) {
       />
 
       <ImageInput
-        label="Логотип Ka6aHbl"
+        label="Логотип КАБАНЫ ЕСПОРТС"
         value={form.teamLogo}
         onChange={(value) => update('teamLogo', value)}
       />

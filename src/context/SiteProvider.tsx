@@ -24,7 +24,7 @@ const FALLBACK_SITE_DATA: SiteData = {
   gallery: [],
   merch: { mode: 'comingSoon', products: [] },
   settings: {
-    heroTitle: 'KAB6ANbl ESPORTS',
+    heroTitle: 'КАБАНЫ ЕСПОРТС',
     heroSubtitle: 'Киберспортивная команда по CS2',
     heroImage: '',
     socials: { vk: '', telegram: '', twitch: '' },

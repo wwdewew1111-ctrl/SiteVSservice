@@ -111,7 +111,7 @@ function renderMatch(d) {
   const footerLogoHtml = footerLogo ? `<img src="${esc(footerLogo)}" alt="">` : '';
   card.className = '';
   card.innerHTML = `
-    <div class="wm-row"><span>VK.RU / КАБАНЫ ЕСПОРТ</span></div>
+    <div class="wm-row"><span>VK.RU / КАБАНЫ ЕСПОРТС</span></div>
     <div class="title ${titleCls}">${esc(titleText)}</div>
     <div class="board">
       <div class="board-top">
@@ -129,7 +129,7 @@ function renderMatch(d) {
     <div class="tables">${d.teams.map(teamHtml).join('')}</div>
     <div class="footer">
       <div class="left">FACEIT MATCH</div>
-      <div class="center">${footerLogoHtml}<span class="brand">КАБАНЫ<b>ЕСПОРТ</b></span></div>
+      <div class="center">${footerLogoHtml}<span class="brand">КАБАНЫ <b>ЕСПОРТС</b></span></div>
       <div class="right">${new Date().toLocaleDateString('ru-RU')}</div>
     </div>`;
 }
@@ -167,7 +167,7 @@ function renderPreview(d) {
       ${teams.map((t, i) => `${i ? '<div class="preview-vs">VS</div>' : ''}<div class="preview-team">${logo(t.logo, t.name)}<div class="preview-team-name${t.name.length > 15 ? ' long' : ''}">${esc(t.name)}</div></div>`).join('')}
     </div>
     <div class="preview-info"><div><small>ДАТА</small>${esc(date)}</div><div class="preview-time"><small>НАЧАЛО</small>${esc(time)}</div><div><small>ФОРМАТ</small>${esc(previewFormat.value.trim() || 'TBA')}</div></div>
-    <div class="preview-footer"><span>VK.RU / КАБАНЫ ЕСПОРТ</span><span class="preview-brand">${footerLogo ? `<img src="${esc(footerLogo)}" alt="">` : ''} КАБАНЫ ЕСПОРТС</span></div>
+    <div class="preview-footer"><span>VK.RU / КАБАНЫ ЕСПОРТС</span><span class="preview-brand">${footerLogo ? `<img src="${esc(footerLogo)}" alt="">` : ''} КАБАНЫ ЕСПОРТС</span></div>
     <div class="preview-accent"></div>
   </div>`;
 }

@@ -15,7 +15,7 @@ import { ServiceAdmin } from '@/components/admin/service/ServiceAdmin';
 const TABS = [
   { id: 'matches', label: 'Матчи', Icon: Swords },
   { id: 'news', label: 'Новости', Icon: Newspaper },
-  { id: 'roster', label: 'Состав CS2', Icon: Users },
+  { id: 'roster', label: 'Состав и Staff', Icon: Users },
   { id: 'gallery', label: 'Галерея', Icon: Images },
   { id: 'merch', label: 'Мерч', Icon: ShoppingBag },
   { id: 'service', label: 'Сервис', Icon: BarChart3 },

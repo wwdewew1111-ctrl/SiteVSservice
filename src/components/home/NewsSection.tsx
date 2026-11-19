@@ -19,7 +19,7 @@ export function NewsSection() {
         <SectionHeading
           eyebrow="Новости команды"
           title="Последние события"
-          description="Турниры, победы, составы и закулисье KAB6ANbl ESPORTS."
+          description="Турниры, победы, составы и закулисье КАБАНЫ ЕСПОРТС."
         />
 
         {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : data.news.length === 0 ? (

@@ -1,9 +1,10 @@
 import { ArrowRight } from 'lucide-react';
 import { useSite } from '@/context/siteStore';
+import { TEAM_NAME } from '@/lib/brand';
 
 export function Hero() {
-  const { heroTitle, heroSubtitle, heroImage } = useSite().data.settings;
-  const [firstWord, ...restWords] = heroTitle.split(' ');
+  const { heroSubtitle, heroImage } = useSite().data.settings;
+  const [firstWord, ...restWords] = TEAM_NAME.split(' ');
   const accentWords = restWords.join(' ');
   const marqueeItem = 'КАБАНЫ ЕСПОРТС • CS2 • Сила в команде • ';
 

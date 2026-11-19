@@ -90,7 +90,7 @@ export function MatchesAdmin() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 truncate font-semibold text-text">Ka6aHbl vs {match.opponent}</p>
+                    <p className="mt-1 truncate font-semibold text-text">КАБАНЫ ЕСПОРТС vs {match.opponent}</p>
                   </div>
                   <div className="flex shrink-0 flex-col gap-2">
                     <button type="button" onClick={() => setDraft(match)} className="btn-icon" aria-label={`Редактировать матч против ${match.opponent}`}>

@@ -57,7 +57,7 @@ export function MatchScoreEditor({ match, onSave }: MatchScoreEditorProps) {
             value={teamInput}
             onChange={(event) => setTeamInput(event.target.value)}
             placeholder={unit}
-            aria-label={`Счёт Ka6aHbl: ${unit.toLowerCase()}`}
+            aria-label={`Счёт КАБАНЫ ЕСПОРТС: ${unit.toLowerCase()}`}
             className="input text-center"
           />
           <span className="text-muted">:</span>

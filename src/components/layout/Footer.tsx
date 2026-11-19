@@ -5,7 +5,7 @@ import { Logo } from './Logo';
 
 const FOOTER_LINKS = [
   { href: '#news', label: 'Новости' },
-  { href: '#roster', label: 'Состав' },
+  { href: '#roster', label: 'О нас' },
   { href: '#gallery', label: 'Галерея' },
   { href: '#merch', label: 'Мерч' },
 ];
@@ -78,7 +78,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-ink-800 pt-6 text-xs text-ink-300 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} KAB6ANbl ESPORTS. Все права защищены.</p>
+          <p>© {new Date().getFullYear()} КАБАНЫ ЕСПОРТС. Все права защищены.</p>
           <Link to="/admin" className="transition hover:text-accent">
             Вход для администратора
           </Link>

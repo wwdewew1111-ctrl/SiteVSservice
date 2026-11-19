@@ -13,7 +13,7 @@ export function MerchSection() {
     <section ref={ref} id="merch" className="scroll-mt-20 py-20 sm:py-28">
       <div className="container-site">
         <SectionHeading
-          eyebrow="Мерч KAB6ANbl"
+          eyebrow="Мерч КАБАНЫ ЕСПОРТС"
           title={status !== 'loaded' ? undefined : mode === 'shop' ? 'Фирменная линейка' : 'Скоро в продаже'}
           description="Джерси, худи и коврики в фирменных черно-красных цветах команды."
         />

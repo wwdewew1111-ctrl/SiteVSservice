@@ -8,23 +8,25 @@ import { SortableList } from '@/components/admin/SortableList';
 import { PlayerForm } from './PlayerForm';
 import type { Player } from '@/types';
 
-function createBlankPlayer(): Player {
+function createBlankPlayer(isStaff: boolean): Player {
   return {
     id: createId(),
     nickname: '',
     name: '',
     role: '',
     photo: '',
-    isCoach: false,
+    isCoach: isStaff,
   };
 }
 
 export function RosterAdmin() {
   const { data, actions } = useSite();
   const [draft, setDraft] = useState<Player | null>(null);
+  const [tab, setTab] = useState<'players' | 'staff'>('players');
+  const visiblePlayers = data.players.filter((player) => player.isCoach === (tab === 'staff'));
 
   const handleDelete = (player: Player) => {
-    if (window.confirm(`Удалить игрока ${player.nickname} из состава?`)) {
+    if (window.confirm(`Удалить ${player.isCoach ? 'сотрудника' : 'игрока'} ${player.nickname}?`)) {
       actions.deletePlayer(player.id);
     }
   };
@@ -32,23 +34,45 @@ export function RosterAdmin() {
   return (
     <div>
       <AdminToolbar
-        title="Состав CS2"
-        description="Поменяйте никнейм, роль или фото у любого игрока, либо добавьте нового."
+        title="Состав и Staff"
+        description="Управляйте игроками и сотрудниками команды: добавляйте, редактируйте и меняйте порядок карточек."
         action={
-          <button type="button" onClick={() => setDraft(createBlankPlayer())} className="btn-primary">
+          <button type="button" onClick={() => setDraft(createBlankPlayer(tab === 'staff'))} className="btn-primary">
             <Plus className="h-4 w-4" />
-            Добавить игрока
+            {tab === 'staff' ? 'Добавить сотрудника' : 'Добавить игрока'}
           </button>
         }
       />
 
-      {data.players.length === 0 ? (
-        <div className="card p-10 text-center text-muted">В составе пока никого нет.</div>
+      <div role="group" aria-label="Раздел команды" className="mb-6 inline-flex rounded-lg border border-border bg-elevated p-1">
+        {([
+          { value: 'players', label: 'Состав по CS2' },
+          { value: 'staff', label: 'Staff' },
+        ] as const).map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            aria-pressed={tab === item.value}
+            onClick={() => setTab(item.value)}
+            className={`rounded-md px-4 py-2 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              tab === item.value ? 'bg-accent text-white shadow-sm' : 'text-muted hover:text-text'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {visiblePlayers.length === 0 ? (
+        <div className="card p-10 text-center text-muted">{tab === 'staff' ? 'Сотрудники пока не добавлены.' : 'В составе пока никого нет.'}</div>
       ) : (
         <SortableList
-          items={data.players}
-          label="игрок"
-          onReorder={actions.reorderPlayers}
+          items={visiblePlayers}
+          label={tab === 'staff' ? 'сотрудник' : 'игрок'}
+          onReorder={(ordered) => {
+            let index = 0;
+            void actions.reorderPlayers(data.players.map((player) => player.isCoach === (tab === 'staff') ? ordered[index++] : player));
+          }}
           renderItem={(player) => (
             <div className="card flex items-center gap-4 p-4">
               {player.photo ? (
@@ -84,7 +108,7 @@ export function RosterAdmin() {
       <Modal
         open={draft !== null}
         onClose={() => setDraft(null)}
-        title={draft?.nickname ? 'Редактирование игрока' : 'Новый игрок'}
+        title={draft?.nickname ? `Редактирование ${draft.isCoach ? 'сотрудника' : 'игрока'}` : draft?.isCoach ? 'Новый сотрудник' : 'Новый игрок'}
         widthClass="max-w-2xl"
       >
         {draft && (

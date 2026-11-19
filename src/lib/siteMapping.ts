@@ -1,4 +1,5 @@
 import type { GalleryPhoto, Match, MatchFormat, MatchMap, MatchPhase, MerchProduct, NewsItem, Partner, Player, SiteData, SiteSettings, SocialLinks } from '@/types';
+import { normalizeTeamName } from '@/lib/brand';
 
 export interface MatchRow {
   id: string;
@@ -98,7 +99,13 @@ export const matchFromRow = (row: MatchRow): Match => ({
 
 export const newsToRow = (item: NewsItem): NewsRow => ({ ...item });
 
-export const newsFromRow = (row: NewsRow): NewsItem => ({ ...row });
+export const newsFromRow = (row: NewsRow): NewsItem => ({
+  ...row,
+  title: normalizeTeamName(row.title),
+  tag: normalizeTeamName(row.tag),
+  excerpt: normalizeTeamName(row.excerpt),
+  content: normalizeTeamName(row.content),
+});
 
 export const playerToRow = (player: Player): PlayerRow => ({
   id: player.id,
@@ -120,11 +127,11 @@ export const playerFromRow = (row: PlayerRow): Player => ({
 
 export const photoToRow = (photo: GalleryPhoto): GalleryRow => ({ ...photo });
 
-export const photoFromRow = (row: GalleryRow): GalleryPhoto => ({ ...row });
+export const photoFromRow = (row: GalleryRow): GalleryPhoto => ({ ...row, caption: normalizeTeamName(row.caption) });
 
 export const productToRow = (product: MerchProduct): ProductRow => ({ ...product });
 
-export const productFromRow = (row: ProductRow): MerchProduct => ({ ...row });
+export const productFromRow = (row: ProductRow): MerchProduct => ({ ...row, title: normalizeTeamName(row.title) });
 
 export const settingsToRow = (settings: SiteSettings): SettingsRow => ({
   id: 'main',
@@ -136,8 +143,8 @@ export const settingsToRow = (settings: SiteSettings): SettingsRow => ({
 });
 
 export const settingsFromRow = (row: SettingsRow): SiteSettings => ({
-  heroTitle: row.hero_title,
-  heroSubtitle: row.hero_subtitle,
+  heroTitle: normalizeTeamName(row.hero_title),
+  heroSubtitle: normalizeTeamName(row.hero_subtitle),
   heroImage: row.hero_image,
   socials: row.socials,
   partners: row.partners,

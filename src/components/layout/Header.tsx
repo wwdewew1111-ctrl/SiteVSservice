@@ -6,7 +6,7 @@ import { ThemeToggle } from './ThemeToggle';
 const NAV_LINKS = [
   { href: '#matches', label: 'Матчи' },
   { href: '#news', label: 'Новости' },
-  { href: '#roster', label: 'Состав' },
+  { href: '#roster', label: 'О нас' },
   { href: '#statistics', label: 'Статистика' },
   { href: '#gallery', label: 'Галерея' },
   { href: '#merch', label: 'Мерч' },
@@ -18,11 +18,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
       <div className="container-site flex h-16 items-center justify-between gap-4">
-        <a href="#top" aria-label="KAB6ANbl ESPORTS, на главную" className="text-text">
+        <a href="#top" aria-label="КАБАНЫ ЕСПОРТС, на главную" className="text-text">
           <Logo />
         </a>
 
-        <nav className="hidden items-center md:flex" aria-label="Основная навигация">
+        <nav className="hidden items-center lg:flex" aria-label="Основная навигация">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
@@ -42,7 +42,7 @@ export function Header() {
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
             aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
-            className="btn-icon md:hidden"
+            className="btn-icon lg:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -50,7 +50,7 @@ export function Header() {
       </div>
 
       {menuOpen && (
-        <nav className="border-t border-border bg-bg animate-fade-in md:hidden" aria-label="Мобильная навигация">
+        <nav className="border-t border-border bg-bg animate-fade-in lg:hidden" aria-label="Мобильная навигация">
           <div className="container-site flex flex-col py-2">
             {NAV_LINKS.map((link) => (
               <a

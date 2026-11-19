@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Check } from 'lucide-react';
 import { useSite } from '@/context/siteStore';
 import { cleanSocials, SOCIAL_FIELDS } from '@/lib/socials';
+import { TEAM_NAME } from '@/lib/brand';
 import type { SiteSettings } from '@/types';
 import { ImageInput } from '@/components/admin/ImageInput';
 import { Field } from '@/components/admin/FormField';
@@ -11,7 +12,6 @@ import { PartnersEditor } from '@/components/admin/PartnersEditor';
 export function SettingsAdmin() {
   const { data, actions } = useSite();
   const [form, setForm] = useState<SiteSettings>(data.settings);
-  const [titleError, setTitleError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const update = <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => {
@@ -26,14 +26,9 @@ export function SettingsAdmin() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.heroTitle.trim()) {
-      setTitleError('Введите заголовок главного баннера');
-      return;
-    }
-    setTitleError(null);
     const ok = await actions.saveSettings({
       ...form,
-      heroTitle: form.heroTitle.trim(),
+      heroTitle: TEAM_NAME,
       heroSubtitle: form.heroSubtitle.trim(),
       socials: cleanSocials(form.socials),
       partners: form.partners
@@ -64,13 +59,8 @@ export function SettingsAdmin() {
 
       <section className="card space-y-6 p-6 sm:p-8">
         <h3 className="text-xl text-text">Главный баннер</h3>
-        <Field label="Заголовок" error={titleError} hint="Первое слово выделится белым, остальные красным.">
-          <input
-            type="text"
-            value={form.heroTitle}
-            onChange={(event) => update('heroTitle', event.target.value)}
-            className="input"
-          />
+        <Field label="Название команды" hint="Название используется на главном баннере.">
+          <input type="text" value={TEAM_NAME} readOnly className="input" />
         </Field>
         <Field label="Слоган">
           <textarea

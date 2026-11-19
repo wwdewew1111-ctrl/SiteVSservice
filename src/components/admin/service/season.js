@@ -278,7 +278,7 @@ async function runSeason() {
   const ok = results.filter(r => r.data && !r.data.skip);
   const skipped = results.length - ok.length;
   if (!ok.length) {
-    return setSeasonStatus(`Не нашёл завершённых матчей с командой ${TEAM_NAME} в этой выборке.`, true);
+    return setSeasonStatus(`Не нашёл завершённых матчей с командой ${CARD_TEAM_NAME} в этой выборке.`, true);
   }
   seasonData = aggregate(ok.map(r => r.data));
   renderSeason();

@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { fetchEseaState, getActiveSeason, playerKd, type EseaMatch, type EseaState, type PlayerStat } from '@/services/eseaService';
 import type { Player } from '@/types';
 import { PlayerCard } from './PlayerCard';
+import { StaffCard } from './StaffCard';
 
 function findPlayer(players: PlayerStat[], nickname: string): PlayerStat | undefined {
   const normalized = nickname.trim().toLowerCase();
@@ -78,6 +79,7 @@ function PlayerMatch({ match, stats }: { match: EseaMatch; stats: PlayerStat }) 
 export function RosterSection() {
   const { data } = useSite();
   const { ref, status, retry } = useLazySection('players');
+  const [tab, setTab] = useState<'players' | 'staff'>('players');
   const [selected, setSelected] = useState<Player | null>(null);
   const [state, setState] = useState<EseaState | null>(null);
   const [error, setError] = useState(false);
@@ -92,6 +94,7 @@ export function RosterSection() {
     return () => { active = false; };
   }, [selected]);
 
+  const visiblePlayers = data.players.filter((item) => item.isCoach === (tab === 'staff'));
   const season = state ? getActiveSeason(state) ?? state.seasons.find((item) => !item.isArchived) : undefined;
   const player = selected && season ? findPlayer(season.players, selected.nickname) : undefined;
   const matches = player && season ? (season.matches ?? []).flatMap((match) => {
@@ -102,15 +105,45 @@ export function RosterSection() {
   return (
     <section ref={ref} id="roster" className="min-h-96 scroll-mt-20 border-y border-border bg-elevated/50 py-20 sm:py-28">
       <div className="container-site">
-        <SectionHeading eyebrow="Состав по CS2" title="Наша команда" />
-        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : data.players.length === 0 ? (
-          <p className="text-muted">Состав пока не добавлен.</p>
+        <SectionHeading
+          eyebrow="О нас"
+          title="Наша команда"
+          description="Люди, которые представляют КАБАНЫ ЕСПОРТС в игре и помогают команде двигаться вперёд."
+        />
+        <div role="group" aria-label="Раздел команды" className="mb-10 inline-flex rounded-lg border border-border bg-elevated p-1">
+          {([
+            { value: 'players', label: 'Состав по CS2' },
+            { value: 'staff', label: 'Staff' },
+          ] as const).map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              aria-pressed={tab === item.value}
+              onClick={() => setTab(item.value)}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                tab === item.value ? 'bg-accent text-white shadow-sm' : 'text-muted hover:text-text'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {status !== 'loaded' ? <SectionStatus status={status} onRetry={retry} /> : visiblePlayers.length === 0 ? (
+          <p className="text-muted">{tab === 'players' ? 'Состав пока не добавлен.' : 'Сотрудники команды пока не добавлены.'}</p>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {data.players.map((item) => (
-              <PlayerCard key={item.id} player={item} onClick={() => { opener.current = document.activeElement as HTMLElement; setState(null); setError(false); setSelected(item); }} />
-            ))}
-          </div>
+          tab === 'staff' ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {visiblePlayers.map((item) => <StaffCard key={item.id} member={item} />)}
+            </div>
+          ) : (
+            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4 pt-2 lg:gap-6">
+              {visiblePlayers.map((item) => (
+                <div key={item.id} className="w-[min(75vw,260px)] shrink-0 snap-start lg:w-[calc((100%_-_6rem)/5)]">
+                  <PlayerCard player={item} onClick={() => { opener.current = document.activeElement as HTMLElement; setState(null); setError(false); setSelected(item); }} />
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
       <Modal open={Boolean(selected)} onClose={() => { setSelected(null); opener.current?.focus(); }} title={`Статистика ${selected?.nickname ?? ''}`} stickyClose>

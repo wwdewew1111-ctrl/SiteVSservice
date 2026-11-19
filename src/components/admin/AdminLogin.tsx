@@ -28,7 +28,7 @@ export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text">
       <div className="container-site flex h-16 items-center justify-between">
-        <Link to="/" aria-label="KAB6ANbl ESPORTS, на главную" className="text-text">
+        <Link to="/" aria-label="КАБАНЫ ЕСПОРТС, на главную" className="text-text">
           <Logo />
         </Link>
         <ThemeToggle />
