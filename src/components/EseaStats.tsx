@@ -116,7 +116,7 @@ export function EseaPublicSection() {
   };
 
   return (
-    <section id="statistics" className="scroll-mt-20 border-y border-border bg-elevated/50 py-20 sm:py-28">
+    <section id="statistics" className="scroll-mt-20 border-y border-border bg-elevated/50 py-16 sm:py-20">
       <div className="container-site">
         <SectionHeading
           eyebrow="Турнирные показатели"

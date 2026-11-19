@@ -14,7 +14,7 @@ export function NewsSection() {
   const active = data.news.find((item) => item.id === activeId) ?? null;
 
   return (
-    <section ref={ref} id="news" className="min-h-80 scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="news" className="min-h-80 scroll-mt-20 py-16 sm:py-20">
       <div className="container-site">
         <SectionHeading
           eyebrow="Новости команды"

@@ -104,7 +104,7 @@ export function RosterSection() {
   }).sort((a, b) => b.match.date.localeCompare(a.match.date)) : [];
 
   return (
-    <section ref={ref} id="roster" className="min-h-96 scroll-mt-20 border-y border-border bg-elevated/50 py-20 sm:py-28">
+    <section ref={ref} id="roster" className="min-h-96 scroll-mt-20 border-y border-border bg-elevated/50 py-16 sm:py-20">
       <div className="container-site">
         <SectionHeading
           eyebrow="О нас"

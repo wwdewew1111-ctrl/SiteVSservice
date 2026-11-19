@@ -10,7 +10,7 @@ export function MerchSection() {
   const { ref, status, retry } = useLazySection('merch');
 
   return (
-    <section ref={ref} id="merch" className="scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="merch" className="scroll-mt-20 py-16 sm:py-20">
       <div className="container-site">
         <SectionHeading
           eyebrow="Мерч КАБАНЫ ЕСПОРТС"

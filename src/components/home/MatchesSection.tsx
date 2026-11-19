@@ -29,7 +29,7 @@ export function MatchesSection() {
     .sort((a, b) => Number(b.phase === 'live') - Number(a.phase === 'live'));
 
   return (
-    <section ref={ref} id="matches" className="min-h-80 scroll-mt-20 py-20 sm:py-28">
+    <section ref={ref} id="matches" className="min-h-80 scroll-mt-20 py-16 sm:py-20">
       <div className="container-site">
         <SectionHeading
           eyebrow="Календарь"
