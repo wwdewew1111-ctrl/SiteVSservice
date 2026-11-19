@@ -19,7 +19,11 @@ export function StaffCard({ member }: { member: Player }) {
           <h3 className="font-display text-2xl uppercase tracking-wide text-white">{member.nickname}</h3>
           {member.name && <p className="mt-1 text-sm text-ink-300">{member.name}</p>}
         </div>
-        <span className="inline-flex rounded border border-accent/60 bg-accent/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white">{member.role}</span>
+        <div className="flex flex-wrap gap-2">
+          {member.role.trim().split(/\s+/).filter(Boolean).map((role, index) => (
+            <span key={`${role}-${index}`} className="max-w-full break-words rounded border border-accent/60 bg-accent/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white">{role}</span>
+          ))}
+        </div>
       </div>
     </article>
   );

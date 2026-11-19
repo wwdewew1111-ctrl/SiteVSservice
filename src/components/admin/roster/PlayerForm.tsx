@@ -69,7 +69,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
         </Field>
       </div>
 
-      <Field label={form.isCoach ? 'Должность' : 'Роль в CS2'} error={errors.role} hint={form.isCoach ? 'Например: тренер, менеджер или аналитик.' : 'Выберите из списка или напишите свою роль.'}>
+      <Field label={form.isCoach ? 'Должность' : 'Роль в CS2'} error={errors.role} hint={form.isCoach ? 'Укажите должности через пробел, например: CEO Тренер.' : 'Выберите из списка или напишите свою роль.'}>
         <input
           type="text"
           list={form.isCoach ? undefined : 'cs2-roles'}
