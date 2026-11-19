@@ -13,7 +13,10 @@ function createBlankPlayer(isStaff: boolean): Player {
     id: createId(),
     nickname: '',
     name: '',
+    surname: '',
     role: '',
+    bio: '',
+    quote: '',
     photo: '',
     isCoach: isStaff,
   };
@@ -84,7 +87,7 @@ export function RosterAdmin() {
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-lg uppercase text-text">{player.nickname}</p>
-                <p className="truncate text-sm text-muted">{player.name}</p>
+                <p className="truncate text-sm text-muted">{[player.name, player.surname].filter(Boolean).join(' ')}</p>
                 <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wider text-accent">{player.role}</p>
               </div>
               <div className="flex flex-col gap-2">

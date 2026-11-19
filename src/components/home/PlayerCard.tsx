@@ -25,7 +25,7 @@ export function PlayerCard({ player, onClick }: { player: Player; onClick: () =>
       <div className="space-y-3 p-5 sm:p-6">
         <div>
           <h3 className="break-words font-display text-xl uppercase tracking-wide text-white sm:text-2xl lg:text-lg xl:text-xl">{player.nickname}</h3>
-          <p className="mt-1 text-sm text-ink-300">{player.name}</p>
+          <p className="mt-1 text-sm text-ink-300">{[player.name, player.surname].filter(Boolean).join(' ')}</p>
         </div>
         <span className="inline-flex rounded border border-accent/60 bg-accent/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white">
           {player.role}

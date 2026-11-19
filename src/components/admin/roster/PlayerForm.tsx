@@ -33,7 +33,10 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       ...form,
       nickname: form.nickname.trim(),
       name: form.name.trim(),
+      surname: form.surname.trim(),
       role: form.role.trim(),
+      bio: form.bio.trim(),
+      quote: form.quote.trim(),
     });
   };
 
@@ -67,6 +70,15 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
             className="input"
           />
         </Field>
+        <Field label="Фамилия (необязательно)">
+          <input
+            type="text"
+            value={form.surname}
+            onChange={(event) => update('surname', event.target.value)}
+            placeholder="Например: Иванов"
+            className="input"
+          />
+        </Field>
       </div>
 
       <Field label={form.isCoach ? 'Должность' : 'Роль в CS2'} error={errors.role} hint={form.isCoach ? 'Укажите должности через пробел, например: CEO Тренер.' : 'Выберите из списка или напишите свою роль.'}>
@@ -84,6 +96,27 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
           ))}
         </datalist>
       </Field>
+
+      {form.isCoach && (
+        <>
+          <Field label="Описание (необязательно)">
+            <textarea
+              value={form.bio}
+              onChange={(event) => update('bio', event.target.value)}
+              placeholder="Расскажите о сотруднике"
+              className="textarea"
+            />
+          </Field>
+          <Field label="Цитата (необязательно)">
+            <textarea
+              value={form.quote}
+              onChange={(event) => update('quote', event.target.value)}
+              placeholder="Цитата сотрудника"
+              className="textarea"
+            />
+          </Field>
+        </>
+      )}
 
       <ImageInput label={form.isCoach ? 'Фото сотрудника (необязательно)' : 'Фото игрока (необязательно)'} value={form.photo} onChange={(value) => update('photo', value)} />
 

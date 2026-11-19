@@ -1,8 +1,8 @@
 import type { Player } from '@/types';
 
-export function StaffCard({ member }: { member: Player }) {
+export function StaffCard({ member, onClick }: { member: Player; onClick: () => void }) {
   return (
-    <article className="group w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-950 text-white transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_20px_50px_-20px_rgba(255,30,30,0.6)]">
+    <button type="button" onClick={onClick} aria-label={`Открыть профиль сотрудника ${member.nickname}`} className="group w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-950 text-left text-white transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_20px_50px_-20px_rgba(255,30,30,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
       <div className="relative aspect-[4/5] overflow-hidden">
         {member.photo ? (
           <img src={member.photo} alt={member.nickname} loading="lazy" className="h-full w-full object-cover grayscale transition duration-500 group-hover:scale-105 group-hover:grayscale-0" />
@@ -17,7 +17,7 @@ export function StaffCard({ member }: { member: Player }) {
       <div className="space-y-3 p-5 sm:p-6">
         <div>
           <h3 className="font-display text-2xl uppercase tracking-wide text-white">{member.nickname}</h3>
-          {member.name && <p className="mt-1 text-sm text-ink-300">{member.name}</p>}
+          {(member.name || member.surname) && <p className="mt-1 text-sm text-ink-300">{[member.name, member.surname].filter(Boolean).join(' ')}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {member.role.trim().split(/\s+/).filter(Boolean).map((role, index) => (
@@ -25,6 +25,6 @@ export function StaffCard({ member }: { member: Player }) {
           ))}
         </div>
       </div>
-    </article>
+    </button>
   );
 }

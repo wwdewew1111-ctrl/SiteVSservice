@@ -32,7 +32,10 @@ export interface PlayerRow {
   id: string;
   nickname: string;
   name: string;
+  surname?: string | null;
   role: string;
+  bio?: string | null;
+  quote?: string | null;
   photo: string;
   is_coach: boolean;
 }
@@ -112,6 +115,9 @@ export const playerToRow = (player: Player): PlayerRow => ({
   nickname: player.nickname,
   name: player.name,
   role: player.role,
+  surname: player.surname,
+  bio: player.bio,
+  quote: player.quote,
   photo: player.photo,
   is_coach: player.isCoach,
 });
@@ -120,7 +126,10 @@ export const playerFromRow = (row: PlayerRow): Player => ({
   id: row.id,
   nickname: row.nickname,
   name: row.name,
+  surname: row.surname ?? '',
   role: row.role,
+  bio: row.bio ?? '',
+  quote: row.quote ?? '',
   photo: row.photo,
   isCoach: row.is_coach,
 });

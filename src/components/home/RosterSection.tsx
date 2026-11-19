@@ -81,6 +81,7 @@ export function RosterSection() {
   const { ref, status, retry } = useLazySection('players');
   const [tab, setTab] = useState<'players' | 'staff'>('players');
   const [selected, setSelected] = useState<Player | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Player | null>(null);
   const [state, setState] = useState<EseaState | null>(null);
   const [error, setError] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
@@ -133,7 +134,7 @@ export function RosterSection() {
         ) : (
           tab === 'staff' ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {visiblePlayers.map((item) => <StaffCard key={item.id} member={item} />)}
+              {visiblePlayers.map((item) => <StaffCard key={item.id} member={item} onClick={() => { opener.current = document.activeElement as HTMLElement; setSelectedStaff(item); }} />)}
             </div>
           ) : (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4 pt-2 lg:gap-6">
@@ -146,6 +147,49 @@ export function RosterSection() {
           )
         )}
       </div>
+      <Modal open={Boolean(selectedStaff)} onClose={() => { setSelectedStaff(null); opener.current?.focus(); }} title={`Профиль сотрудника ${selectedStaff?.nickname ?? ''}`}>
+        {selectedStaff && (
+          <>
+            <div className="relative overflow-hidden border-b border-ink-800 bg-ink-950 px-5 py-6 pr-14 text-white sm:px-7 sm:py-7 sm:pr-16">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-accent/10 via-transparent to-transparent" />
+              <div className="relative flex items-center gap-4 sm:gap-5">
+                <div className="h-24 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-ink-900">
+                  {selectedStaff.photo ? (
+                    <img src={selectedStaff.photo} alt="" className="h-full w-full object-cover object-top grayscale" />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center font-display text-3xl uppercase text-ink-700">{selectedStaff.nickname.charAt(0)}</div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">Профиль сотрудника</p>
+                  <h3 className="mt-1 break-words font-display text-xl uppercase leading-tight sm:text-3xl">{selectedStaff.nickname}</h3>
+                  {(selectedStaff.name || selectedStaff.surname) && <p className="mt-1 text-sm text-ink-300">{[selectedStaff.name, selectedStaff.surname].filter(Boolean).join(' ')}</p>}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedStaff.role.trim().split(/\s+/).filter(Boolean).map((role, index) => (
+                      <span key={`${role}-${index}`} className="max-w-full break-words rounded border border-accent/50 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{role}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6 p-5 sm:p-7">
+              {selectedStaff.bio && (
+                <section className="space-y-3">
+                  <h4 className="text-lg text-text">Описание</h4>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">{selectedStaff.bio}</p>
+                </section>
+              )}
+              {selectedStaff.quote && (
+                <section className="space-y-3">
+                  <h4 className="text-lg text-text">Цитата</h4>
+                  <blockquote className="whitespace-pre-wrap break-words border-l-2 border-accent pl-4 text-sm italic leading-relaxed text-muted">{selectedStaff.quote}</blockquote>
+                </section>
+              )}
+              {!selectedStaff.bio && !selectedStaff.quote && <p className="text-sm text-muted">Описание и цитата пока не добавлены.</p>}
+            </div>
+          </>
+        )}
+      </Modal>
       <Modal open={Boolean(selected)} onClose={() => { setSelected(null); opener.current?.focus(); }} title={`Статистика ${selected?.nickname ?? ''}`} stickyClose>
         {selected && (
           <>
@@ -164,7 +208,7 @@ export function RosterSection() {
                   <h3 className="mt-1 break-words font-display text-xl uppercase leading-tight sm:text-3xl">{selected.nickname}</h3>
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                     {selected.role && <span className="rounded border border-accent/50 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{selected.role}</span>}
-                    {selected.name && <span className="text-xs text-ink-300 sm:text-sm">{selected.name}</span>}
+                    {(selected.name || selected.surname) && <span className="text-xs text-ink-300 sm:text-sm">{[selected.name, selected.surname].filter(Boolean).join(' ')}</span>}
                   </div>
                 </div>
               </div>

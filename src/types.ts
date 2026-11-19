@@ -18,7 +18,10 @@ export interface Player {
   id: string;
   nickname: string;
   name: string;
+  surname: string;
   role: string;
+  bio: string;
+  quote: string;
   photo: string;
   isCoach: boolean;
 }
