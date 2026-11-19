@@ -43,6 +43,7 @@ const markup = `
   <button type="button" class="tab" data-mode="preview">Превью</button>
   <button type="button" class="tab" data-mode="player">Карточка игрока</button>
   <button type="button" class="tab" data-mode="season">Итоги сезона</button>
+  <button type="button" class="tab" data-mode="statement">Заявление</button>
 </div>
 <div id="bar" class="bar">
   <div id="matchPanel" class="panel">
@@ -62,6 +63,18 @@ const markup = `
     <input id="pPlayer" class="field" type="text" autocomplete="off" aria-label="Профиль игрока" placeholder="Ссылка на профиль игрока или ник FACEIT">
     <div class="line"><input id="pNick" class="field" type="text" autocomplete="off" aria-label="Отображаемый ник" placeholder="Отображаемый ник (необязательно)"><select id="pTheme" class="field sel" aria-label="Тема карточки"><option value="light">Светлая тема</option><option value="dark">Тёмная тема</option></select></div>
     <div class="line"><button id="pPhotoBtn" class="btn">Загрузить фото игрока</button><input id="pPhotoFile" type="file" accept="image/*" hidden><input id="pPhotoUrl" class="field" type="text" autocomplete="off" aria-label="Ссылка на фото" placeholder="Ссылка на фото или вставьте картинку через Ctrl+V"><button id="pCreate" class="btn primary">Создать</button></div>
+  </div>
+  <div id="statementPanel" class="panel" hidden>
+    <div class="statement-fields">
+      <input id="statementDate" class="field" type="text" maxlength="40" value="19 НОЯБРЯ 2026" aria-label="Дата заявления" placeholder="Дата заявления">
+      <input id="statementTitle" class="field" type="text" maxlength="90" value="ЗАЯВЛЕНИЕ" aria-label="Заголовок заявления" placeholder="Заголовок заявления">
+      <select id="statementTitleSize" class="field sel" aria-label="Размер заголовка"><option value="52">Заголовок: компактный</option><option value="64" selected>Заголовок: стандартный</option><option value="78">Заголовок: крупный</option></select>
+    </div>
+    <textarea id="statementText" class="field area statement-area" maxlength="5000" aria-label="Основной текст заявления" placeholder="Основной текст заявления. Абзацы разделяйте пустой строкой.">С глубоким уважением обращаемся к нашей команде и сообществу.
+
+Этот текст можно заменить на ваше заявление. Каждый абзац будет сохранён в отдельном визуальном блоке.</textarea>
+    <select id="statementBodySize" class="field sel statement-size" aria-label="Размер основного текста"><option value="18">Основной текст: компактный</option><option value="23" selected>Основной текст: стандартный</option><option value="28">Основной текст: крупный</option></select>
+    <div class="statement-hint">Логотип «КАБАНЫ ЕСПОРТС» добавляется автоматически.</div>
   </div>
   <div class="bar-actions"><button id="logoBtn" class="btn">Лого подвала</button><input id="logoFile" type="file" accept="image/png" hidden><button id="dl" class="btn" disabled>Скачать PNG</button><button id="cp" class="btn" disabled>Скопировать картинку</button></div>
   <div id="status" class="status" role="status"></div>

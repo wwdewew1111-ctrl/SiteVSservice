@@ -18,6 +18,9 @@ const pMatch = $('pMatch'), pMap = $('pMap'), pPlayer = $('pPlayer'), pNick = $(
 const pPhotoBtn = $('pPhotoBtn'), pPhotoFile = $('pPhotoFile'), pPhotoUrl = $('pPhotoUrl'), pCreate = $('pCreate');
 const logoBtn = $('logoBtn'), logoFile = $('logoFile'), dlBtn = $('dl'), cpBtn = $('cp');
 const statusEl = $('status'), card = $('card');
+const statementPanel = $('statementPanel'), statementDate = $('statementDate');
+const statementTitle = $('statementTitle'), statementTitleSize = $('statementTitleSize');
+const statementText = $('statementText'), statementBodySize = $('statementBodySize');
 
 let mode = 'match';
 let current = null;
@@ -228,14 +231,27 @@ function renderPlayer(p) {
     </div>`;
 }
 
+function renderStatement() {
+  const date = statementDate.value.trim();
+  const title = statementTitle.value.trim();
+  const titleSize = Number(statementTitleSize.value) || 64;
+  const bodySize = Number(statementBodySize.value) || 23;
+  const paragraphs = statementText.value.trim().split(/\n\s*\n/).filter(Boolean);
+  const logoUrl = `${import.meta.env.BASE_URL}assets/images/teams/${encodeURIComponent('КАБАНЫ_БЕЗ_ФОНА.png')}`;
+  card.className = 'statement-mode';
+  card.innerHTML = `<div class="statement-art"><div class="statement-stripe"></div><div class="statement-content"><div class="statement-top"><span>КАБАНЫ ЕСПОРТС</span><span>OFFICIAL STATEMENT</span></div><div class="statement-date"><span>→</span> ${esc(date || 'ДАТА ЗАЯВЛЕНИЯ')}</div><h1 class="statement-title" style="font-size: ${titleSize}px">${esc(title || 'ЗАЯВЛЕНИЕ')}</h1><div class="statement-rule"></div><div class="statement-body" style="font-size: ${bodySize}px">${paragraphs.map(text => `<p>${esc(text).replace(/\n/g, '<br>')}</p>`).join('')}</div><div class="statement-footer"><div><span>ОФИЦИАЛЬНОЕ ЗАЯВЛЕНИЕ</span><strong>КАБАНЫ ЕСПОРТС</strong></div><img src="${esc(logoUrl)}" alt="Логотип КАБАНЫ ЕСПОРТС"></div></div></div>`;
+}
+
 function show() {
   const hasMatch = mode === 'match' && current;
   const hasPreview = mode === 'preview' && preview;
   const hasPlayer = mode === 'player' && player;
+  const hasStatement = mode === 'statement';
   if (hasMatch) renderMatch(current);
   else if (hasPreview) renderPreview(preview);
   else if (hasPlayer) renderPlayer(player);
-  card.hidden = !(hasMatch || hasPreview || hasPlayer);
+  else if (hasStatement) renderStatement();
+  card.hidden = !(hasMatch || hasPreview || hasPlayer || hasStatement);
   dlBtn.disabled = card.hidden;
   cpBtn.disabled = card.hidden;
 }
@@ -353,7 +369,8 @@ async function runExport(action, doneText) {
   }
 }
 
-const fileName = () => mode === 'player' ? `${player.matchId}-${player.nick}`
+const fileName = () => mode === 'statement' ? 'statement-kabany-esports'
+  : mode === 'player' ? `${player.matchId}-${player.nick}`
   : mode === 'preview' ? `preview-${preview.matchId}` : current.matchId;
 
 root.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
@@ -364,9 +381,15 @@ root.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () =>
   matchPanel.hidden = mode !== 'match';
   previewPanel.hidden = mode !== 'preview';
   playerPanel.hidden = mode !== 'player';
+  statementPanel.hidden = mode !== 'statement';
+  logoBtn.hidden = mode === 'statement';
   setStatus('');
   show();
 }));
+
+[statementDate, statementTitle, statementTitleSize, statementText, statementBodySize].forEach(el => {
+  el.addEventListener('input', () => { if (mode === 'statement') show(); });
+});
 
 previewCreate.onclick = generatePreview;
 previewLink.addEventListener('keydown', e => { if (e.key === 'Enter') generatePreview(); });
