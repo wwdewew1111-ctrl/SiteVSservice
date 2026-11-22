@@ -44,7 +44,8 @@ export async function callSiteFunction<T>(body: Record<string, unknown>): Promis
   const payload = (await response.json().catch(() => null)) as { error?: string } | null;
   if (!response.ok) {
     console.error(`site-admin ${String(body.action)} failed`, { status: response.status, data: payload });
-    throw new ApiError(payload?.error ?? 'Не удалось выполнить действие. Попробуйте ещё раз.', response.status, payload);
+    const message = payload?.error ?? 'Не удалось выполнить действие. Попробуйте ещё раз.';
+    throw new ApiError(message, response.status, payload);
   }
   return payload as T;
 }

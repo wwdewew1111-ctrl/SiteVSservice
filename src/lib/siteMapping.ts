@@ -120,7 +120,7 @@ export const playerToRow = (player: Player): PlayerRow => ({
   bio: player.bio,
   quote: player.quote,
   photo: player.photo,
-  faceit_profile: player.faceitProfile,
+  faceit_profile: player.faceitProfile.trim(),
   is_coach: player.isCoach,
 });
 
