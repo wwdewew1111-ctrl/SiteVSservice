@@ -37,6 +37,7 @@ export interface PlayerRow {
   bio?: string | null;
   quote?: string | null;
   photo: string;
+  faceit_profile?: string | null;
   is_coach: boolean;
 }
 
@@ -119,6 +120,7 @@ export const playerToRow = (player: Player): PlayerRow => ({
   bio: player.bio,
   quote: player.quote,
   photo: player.photo,
+  faceit_profile: player.faceitProfile,
   is_coach: player.isCoach,
 });
 
@@ -131,6 +133,7 @@ export const playerFromRow = (row: PlayerRow): Player => ({
   bio: row.bio ?? '',
   quote: row.quote ?? '',
   photo: row.photo,
+  faceitProfile: row.faceit_profile ?? '',
   isCoach: row.is_coach,
 });
 

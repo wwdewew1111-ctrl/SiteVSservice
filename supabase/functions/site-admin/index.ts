@@ -157,17 +157,25 @@ function mappedFaceitNick(localNick: string): string | null {
   return entry ? faceitNickFromUrl(entry.url) : null;
 }
 
+function faceitProfileReference(player: Json, configuredProfiles?: Map<string, string>): string {
+  const configured = configuredProfiles?.get(String(player.nickname ?? "").trim().toLowerCase()) ?? "";
+  const profile = configured || String(player.faceitProfile ?? "").trim();
+  if (profile) {
+    const match = /\/players\/([^/?#]+)/i.exec(profile);
+    return decodeURIComponent(match?.[1] ?? profile);
+  }
+  return mappedFaceitNick(String(player.nickname ?? "")) ?? String(player.faceitNick ?? "").trim();
+}
+
 type FaceitPlayer = { id: string; nickname: string };
 
-async function resolvePlayer(player: Json, apiKey: string): Promise<FaceitPlayer | null> {
+async function resolvePlayer(player: Json, apiKey: string, configuredProfiles?: Map<string, string>): Promise<FaceitPlayer | null> {
   const storedId = typeof player.faceitId === "string" ? player.faceitId.trim() : "";
+  const reference = faceitProfileReference(player, configuredProfiles);
   try {
     const profile = storedId
       ? await faceitGet(`/players/${encodeURIComponent(storedId)}`, apiKey)
-      : await faceitGet(
-          `/players?nickname=${encodeURIComponent(mappedFaceitNick(String(player.nickname ?? "")) ?? String(player.faceitNick ?? ""))}`,
-          apiKey,
-        );
+      : await faceitGet(`/players?nickname=${encodeURIComponent(reference)}`, apiKey);
     if (typeof profile.player_id !== "string" || typeof profile.nickname !== "string") return null;
     return { id: profile.player_id, nickname: profile.nickname };
   } catch (error) {
@@ -180,6 +188,16 @@ async function readEseaState(key: string): Promise<unknown> {
   const { data, error } = await supabase.from("esea_state").select("value").eq("key", key).maybeSingle();
   if (error) throw error;
   return data?.value ?? null;
+}
+
+async function readFaceitProfiles(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from("players").select("nickname, faceit_profile").eq("is_coach", false);
+  if (error) throw error;
+  return new Map(
+    (data ?? [])
+      .filter((row) => typeof row.nickname === "string" && typeof row.faceit_profile === "string" && row.faceit_profile.trim())
+      .map((row) => [row.nickname.trim().toLowerCase(), row.faceit_profile.trim()]),
+  );
 }
 
 async function writeEseaState(key: string, value: unknown): Promise<void> {
@@ -276,11 +294,12 @@ async function syncEsea(): Promise<Response> {
     throw new RequestError("В поле ключа API сохранён ID команды. Вставьте настоящий ключ FACEIT.", 400);
   }
 
+  const configuredProfiles = await readFaceitProfiles();
   const rosterPlayers = ((season.players ?? []) as Json[]).map((player) => ({
     player,
     faceit: null as FaceitPlayer | null,
   }));
-  for (const entry of rosterPlayers) entry.faceit = await resolvePlayer(entry.player, apiKey);
+  for (const entry of rosterPlayers) entry.faceit = await resolvePlayer(entry.player, apiKey, configuredProfiles);
   const unresolved = rosterPlayers.filter(({ faceit }) => !faceit).map(({ player }) => String(player.nickname ?? "Игрок"));
   if (unresolved.length > 0) {
     throw new RequestError(`Не удалось найти профили FACEIT: ${unresolved.join(", ")}. Проверьте ссылки или сохранённые ID.`, 502);

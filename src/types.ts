@@ -23,6 +23,7 @@ export interface Player {
   bio: string;
   quote: string;
   photo: string;
+  faceitProfile: string;
   isCoach: boolean;
 }
 

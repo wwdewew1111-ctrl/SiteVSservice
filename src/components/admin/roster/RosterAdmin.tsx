@@ -18,6 +18,7 @@ function createBlankPlayer(isStaff: boolean): Player {
     bio: '',
     quote: '',
     photo: '',
+    faceitProfile: '',
     isCoach: isStaff,
   };
 }

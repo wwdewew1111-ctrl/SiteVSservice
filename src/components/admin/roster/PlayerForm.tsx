@@ -37,6 +37,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       role: form.role.trim(),
       bio: form.bio.trim(),
       quote: form.quote.trim(),
+      faceitProfile: form.faceitProfile.trim(),
     });
   };
 
@@ -80,6 +81,19 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
           />
         </Field>
       </div>
+
+      <Field
+        label="Профиль FACEIT"
+        hint="Вставьте ссылку на профиль FACEIT или его ID. Она используется для поиска игрока после смены ника."
+      >
+        <input
+          type="text"
+          value={form.faceitProfile}
+          onChange={(event) => update('faceitProfile', event.target.value)}
+          placeholder="https://www.faceit.com/ru/players/... или player_id"
+          className="input"
+        />
+      </Field>
 
       <Field label={form.isCoach ? 'Должность' : 'Роль в CS2'} error={errors.role} hint={form.isCoach ? 'Укажите должности через пробел, например: CEO Тренер.' : 'Выберите из списка или напишите свою роль.'}>
         <input
