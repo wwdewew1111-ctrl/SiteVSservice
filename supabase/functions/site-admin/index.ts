@@ -307,7 +307,7 @@ async function syncEsea(): Promise<Response> {
   const idToNick = new Map(rosterPlayers.map(({ faceit }) => [faceit!.id, faceit!.nickname.toLowerCase()] as const));
   const items = await fetchTeamMatches(teamId, rosterPlayers.map(({ faceit }) => faceit!.id), apiKey);
   const extraIds = (Array.isArray(config.extraMatchIds) ? config.extraMatchIds : []).filter(
-    (id: unknown): id is string => typeof id === "string" && id !== apiKey && id.toLowerCase() !== teamId,
+    (id: unknown): id is string => typeof id === "string" && /^1-[0-9a-f-]{36}$/i.test(id) && id !== apiKey && id.toLowerCase() !== teamId,
   );
   const extraItems: Json[] = [];
   for (const id of extraIds) {
@@ -329,10 +329,11 @@ async function syncEsea(): Promise<Response> {
     });
 
   const startMs = Date.parse(`${String(season.startDate ?? "")}T00:00:00Z`) || 0;
+  const manualMatchIds = new Set(extraIds);
   const seasonMatches = candidates
     .filter(
       (item) =>
-        item.manual === true ||
+        manualMatchIds.has(String(item.match_id ?? "")) ||
         (Number(item.finished_at ?? 0) * 1000 >= startMs &&
           hasSeasonTag(String(item.competition_name ?? ""), String(season.seasonTag ?? ""))),
     )
