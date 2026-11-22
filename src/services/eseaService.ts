@@ -14,6 +14,7 @@ export interface TeamStats {
 export interface PlayerStat {
   nickname: string;
   faceitNick: string;
+  faceitId?: string;
   role: string;
   maps: number;
   kills: number;
@@ -140,8 +141,11 @@ export function startNewSeason(
     teamStats: { ...EMPTY_TEAM_STATS },
     players: zeroedPlayers(),
   };
+  const activePlayers = state.seasons.find((item) => item.id === state.config.activeSeasonId)?.players;
+  const players = activePlayers?.length ? activePlayers.map((player) => ({ ...player, maps: 0, kills: 0, deaths: 0, adr: 0, hsPercent: 0, rating: 0 })) : zeroedPlayers();
+  const seasonWithRoster = { ...season, players };
   return {
-    seasons: [...archived, season],
+    seasons: [...archived, seasonWithRoster],
     config: { ...state.config, activeSeasonId: season.id, lastSync: 0 },
   };
 }

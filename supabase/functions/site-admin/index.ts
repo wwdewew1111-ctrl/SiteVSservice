@@ -157,17 +157,23 @@ function mappedFaceitNick(localNick: string): string | null {
   return entry ? faceitNickFromUrl(entry.url) : null;
 }
 
-async function resolvePlayerIds(nicks: string[], apiKey: string): Promise<Map<string, string>> {
-  const ids = new Map<string, string>();
-  for (const nick of nicks) {
-    try {
-      const player = await faceitGet(`/players?nickname=${encodeURIComponent(nick)}`, apiKey);
-      if (typeof player.player_id === "string") ids.set(nick.toLowerCase(), player.player_id);
-    } catch (error) {
-      console.error(`FACEIT player lookup failed for ${nick}`, error);
-    }
+type FaceitPlayer = { id: string; nickname: string };
+
+async function resolvePlayer(player: Json, apiKey: string): Promise<FaceitPlayer | null> {
+  const storedId = typeof player.faceitId === "string" ? player.faceitId.trim() : "";
+  try {
+    const profile = storedId
+      ? await faceitGet(`/players/${encodeURIComponent(storedId)}`, apiKey)
+      : await faceitGet(
+          `/players?nickname=${encodeURIComponent(mappedFaceitNick(String(player.nickname ?? "")) ?? String(player.faceitNick ?? ""))}`,
+          apiKey,
+        );
+    if (typeof profile.player_id !== "string" || typeof profile.nickname !== "string") return null;
+    return { id: profile.player_id, nickname: profile.nickname };
+  } catch (error) {
+    console.error(`FACEIT player lookup failed for ${String(player.nickname ?? "")}`, error);
+    return null;
   }
-  return ids;
 }
 
 async function readEseaState(key: string): Promise<unknown> {
@@ -270,12 +276,17 @@ async function syncEsea(): Promise<Response> {
     throw new RequestError("В поле ключа API сохранён ID команды. Вставьте настоящий ключ FACEIT.", 400);
   }
 
-  const rosterNicks = ((season.players ?? []) as Json[]).map(
-    (player) => mappedFaceitNick(String(player.nickname ?? "")) ?? String(player.faceitNick ?? ""),
-  );
-  const playerIds = await resolvePlayerIds(rosterNicks.filter(Boolean), apiKey);
-  const idToNick = new Map([...playerIds].map(([nick, id]) => [id, nick]));
-  const items = await fetchTeamMatches(teamId, [...playerIds.values()], apiKey);
+  const rosterPlayers = ((season.players ?? []) as Json[]).map((player) => ({
+    player,
+    faceit: null as FaceitPlayer | null,
+  }));
+  for (const entry of rosterPlayers) entry.faceit = await resolvePlayer(entry.player, apiKey);
+  const unresolved = rosterPlayers.filter(({ faceit }) => !faceit).map(({ player }) => String(player.nickname ?? "Игрок"));
+  if (unresolved.length > 0) {
+    throw new RequestError(`Не удалось найти профили FACEIT: ${unresolved.join(", ")}. Проверьте ссылки или сохранённые ID.`, 502);
+  }
+  const idToNick = new Map(rosterPlayers.map(({ faceit }) => [faceit!.id, faceit!.nickname.toLowerCase()] as const));
+  const items = await fetchTeamMatches(teamId, rosterPlayers.map(({ faceit }) => faceit!.id), apiKey);
   const extraIds = (Array.isArray(config.extraMatchIds) ? config.extraMatchIds : []).filter(
     (id: unknown): id is string => typeof id === "string" && id !== apiKey && id.toLowerCase() !== teamId,
   );
@@ -365,10 +376,10 @@ async function syncEsea(): Promise<Response> {
       }
     }
     const finishedAt = Number(match.finished_at ?? 0);
-    const matchPlayers = ((season.players ?? []) as Json[]).flatMap((player, index) => {
-      const faceitNick = rosterNicks[index];
-      const total = matchTotals.get(faceitNick.toLowerCase());
-      return total?.maps ? [playerStats(player, faceitNick, total)] : [];
+    const matchPlayers = rosterPlayers.flatMap(({ player, faceit }) => {
+      const faceitNick = faceit?.nickname ?? String(player.faceitNick ?? player.nickname ?? "");
+      const total = faceit ? matchTotals.get(faceit.nickname.toLowerCase()) : undefined;
+      return total?.maps ? [playerStats({ ...player, faceitId: faceit?.id }, faceitNick, total)] : [];
     });
     matchStats.push({
       id: String(match.match_id),
@@ -395,13 +406,14 @@ async function syncEsea(): Promise<Response> {
     streak = `${count}${last}`;
   }
 
-  const players = ((season.players ?? []) as Json[]).map((player, index) => {
-    const faceitNick = rosterNicks[index];
-    const total = playerTotals.get(faceitNick.toLowerCase());
+  const players = rosterPlayers.map(({ player, faceit }) => {
+    const faceitNick = faceit?.nickname ?? String(player.faceitNick ?? player.nickname ?? "");
+    const total = faceit ? playerTotals.get(faceit.nickname.toLowerCase()) : undefined;
+    const base = { ...player, faceitId: faceit?.id, faceitNick };
     if (!total || total.maps === 0) {
-      return { ...player, faceitNick, maps: 0, kills: 0, deaths: 0, adr: 0, hsPercent: 0, rating: 0 };
+      return { ...base, maps: 0, kills: 0, deaths: 0, adr: 0, hsPercent: 0, rating: 0 };
     }
-    return playerStats(player, faceitNick, total);
+    return playerStats(base, faceitNick, total);
   });
 
   const updatedSeasons = seasons.map((item) =>

@@ -599,7 +599,14 @@ export function EseaAdminTab() {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                       <label className="block lg:col-span-2">
                         <span className="label">Ник на FACEIT</span>
-                        <input type="text" value={player.faceitNick} disabled={locked} onChange={(e) => updatePlayer(index, { faceitNick: e.target.value.trim() })} className="input" />
+                        <input
+                          type="text"
+                          value={player.faceitNick}
+                          disabled={locked}
+                          onChange={(e) => updatePlayer(index, { faceitNick: e.target.value.trim() })}
+                          className="input"
+                        />
+                        {player.faceitId && <span className="mt-1 block text-xs text-muted">ID профиля сохранён</span>}
                       </label>
                       <NumberField label="Карты" value={player.maps} disabled={locked} onChange={(maps) => updatePlayer(index, { maps })} />
                       <NumberField label="Убийства" value={player.kills} disabled={locked} onChange={(kills) => updatePlayer(index, { kills })} />
