@@ -314,7 +314,12 @@ async function syncEsea(): Promise<Response> {
     const details = await faceitGet(`/matches/${encodeURIComponent(id)}`, apiKey);
     extraItems.push({ ...details, match_id: id, manual: true });
   }
-  const candidates = [...items, ...extraItems.filter((extra) => !items.some((item) => item.match_id === extra.match_id))];
+  const candidatesById = new Map<string, Json>();
+  for (const item of [...items, ...extraItems]) {
+    const id = String(item.match_id ?? "").trim();
+    if (id) candidatesById.set(id, item);
+  }
+  const candidates = [...candidatesById.values()];
   const activeNumber = seasonNumber(String(season.seasonTag ?? ""));
   const newSeasonDetected =
     activeNumber !== null &&
@@ -343,6 +348,10 @@ async function syncEsea(): Promise<Response> {
   for (const match of seasonMatches) {
     const stats = await faceitGet(`/matches/${String(match.match_id)}/stats`, apiKey);
     const rounds = (Array.isArray(stats.rounds) ? stats.rounds : []) as Json[];
+    if (rounds.length === 0) {
+      console.warn("FACEIT match has no completed rounds; excluded from W/L", { matchId: match.match_id });
+      continue;
+    }
     let ourMaps = 0;
     let oppMaps = 0;
     const matchTotals = new Map<string, PlayerTotal>();
