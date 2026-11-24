@@ -19,8 +19,14 @@ const SUM_STATS = {
   penta: ['Penta Kills'],
   headshots: ['Headshots'],
   damage: ['Damage'],
-  utilityCount: ['Utility Count'],
-  utilityDamage: ['Utility Damage'],
+  utilityCount: ['Utility Count', 'Grenades Thrown'],
+  utilityDamage: ['Utility Damage', 'Utility Damage Done'],
+  he: ['HE Grenades', 'HE Grenade'],
+  flash: ['Flashbangs', 'Flashbangs Thrown'],
+  smoke: ['Smoke Grenades', 'Smokes'],
+  molotov: ['Molotovs', 'Incendiaries'],
+  grenadeKills: ['Grenade Kills', 'HE Grenade Kills'],
+  flashAssists: ['Flash Assists'],
   flashSuccess: ['Flash Successes'],
   enemiesFlashed: ['Enemies Flashed'],
   sniper: ['Sniper Kills'],
@@ -30,10 +36,16 @@ const SUM_STATS = {
   entryAttempts: ['Entry Count'],
   entryWins: ['Entry Wins'],
   clutchKills: ['Clutch Kills'],
-  c1v1Wins: ['1v1Wins'],
-  c1v1Count: ['1v1Count'],
-  c1v2Wins: ['1v2Wins'],
-  c1v2Count: ['1v2Count'],
+  c1v1Wins: ['1v1Wins', '1v1 Wins'],
+  c1v1Count: ['1v1Count', '1v1 Count', '1v1 Attempts'],
+  c1v2Wins: ['1v2Wins', '1v2 Wins'],
+  c1v2Count: ['1v2Count', '1v2 Count', '1v2 Attempts'],
+  c1v3Wins: ['1v3Wins', '1v3 Wins'],
+  c1v3Count: ['1v3Count', '1v3 Count', '1v3 Attempts'],
+  c1v4Wins: ['1v4Wins', '1v4 Wins'],
+  c1v4Count: ['1v4Count', '1v4 Count', '1v4 Attempts'],
+  c1v5Wins: ['1v5Wins', '1v5 Wins'],
+  c1v5Count: ['1v5Count', '1v5 Count', '1v5 Attempts'],
 };
 
 const PCT_STATS = {
@@ -44,6 +56,7 @@ export function initSeason(root) {
 const $ = id => root.querySelector(`#${id}`);
   const panel = $('seasonPanel');
   let seasonData = null;
+  let seasonRosterIds = [];
 
   const readStat = (ps, aliases) => {
     for (const key of aliases) {
@@ -119,6 +132,7 @@ async function processMatch(id) {
     const s = summarize(p);
     const ex = extras.get(pid) || { sums: {}, pct: {} };
     records.set(pid, {
+      playerId: pid,
       nick: s.nick,
       maps: p.mapCount,
       R: p.R,
@@ -140,9 +154,10 @@ function aggregate(list) {
   for (const m of list) {
     for (const [pid, r] of m.records) {
       if (!players.has(pid)) {
-        players.set(pid, { nick: r.nick, maps: 0, R: 0, k: 0, d: 0, a: 0, rtg: [], kd: [], swing: [], hs: [], sums: {}, pct: {} });
+        players.set(pid, { playerId: pid, nick: r.nick, maps: 0, R: 0, k: 0, d: 0, a: 0, rtg: [], kd: [], swing: [], hs: [], sums: {}, pct: {} });
       }
       const a = players.get(pid);
+      // The stable FACEIT player ID is the aggregation key; the latest nickname is display-only.
       a.nick = r.nick;
       a.maps += r.maps;
       a.R += r.R;
@@ -198,7 +213,9 @@ function seasonCard(index, title, headers, rows) {
 }
 
 function renderSeason() {
-  const players = seasonData.players;
+  // Only players from the configured season roster are shown; substitutes are excluded.
+  const rosterIds = new Set((seasonData.rosterIds || []).filter(Boolean));
+  const players = seasonData.players.filter(player => !rosterIds.size || rosterIds.has(player.playerId));
   const s = (a, key) => a.sums[key] || 0;
   const sections = [
     ['Общая статистика',
@@ -209,11 +226,11 @@ function renderSeason() {
         s(a, 'headshots'), `${Math.round(avgOf(a.hs))}%`,
         s(a, 'double'), s(a, 'triple'), s(a, 'quadro'), s(a, 'penta'), s(a, 'mvp'),
       ])],
-    ['Расширенная статистика',
-      ['Игрок', 'Урон', 'ADR', 'Гранаты', 'Урон гранатами', 'Успешных флешей', 'Ослеплено врагов'],
+    ['Гранаты',
+      ['Игрок', 'HE', 'Flash', 'Smoke', 'Molotov', 'Убийства гранатами', 'Flash assists', 'Урон гранатами', 'Успешных флешей', 'Ослеплено врагов'],
       players.map(a => [
-        a.nick, s(a, 'damage'), avgOf(a.pct.adr || []).toFixed(1), s(a, 'utilityCount'),
-        s(a, 'utilityDamage'), s(a, 'flashSuccess'), s(a, 'enemiesFlashed'),
+        a.nick, s(a, 'he'), s(a, 'flash'), s(a, 'smoke'), s(a, 'molotov'), s(a, 'grenadeKills'),
+        s(a, 'flashAssists'), s(a, 'utilityDamage'), s(a, 'flashSuccess'), s(a, 'enemiesFlashed'),
       ])],
     ['Энтри-статистика',
       ['Игрок', 'Попытки энтри', 'Энтри-убийства', 'Энтри-смерти', 'Разница', '% раундов с энтри', 'Успешность энтри %'],
@@ -229,14 +246,22 @@ function renderSeason() {
       ['Игрок', 'Пистолетные', 'Снайперские', 'Ножевые', 'Zeus'],
       players.map(a => [a.nick, s(a, 'pistol'), s(a, 'sniper'), s(a, 'knife'), s(a, 'zeus')])],
     ['Клатчи',
-      ['Игрок', 'Ситуаций', 'Побед в клатчах', 'Клатчей проиграно', 'Успех %', 'Клатч-убийства', '1v1 побед', '1v2 побед'],
+      ['Игрок', 'Ситуаций', 'Побед', 'Поражений', 'Успех %', 'Клатч-убийства', '1v1', '1v2', '1v3', '1v4', '1v5'],
       players.map(a => {
-        const attempts = s(a, 'c1v1Count') + s(a, 'c1v2Count');
-        const won = s(a, 'c1v1Wins') + s(a, 'c1v2Wins');
+        const situations = [1, 2, 3, 4, 5].map(level => s(a, `c1v${level}Count`));
+        const wins = [1, 2, 3, 4, 5].map(level => s(a, `c1v${level}Wins`));
+        const attempts = situations.reduce((total, value) => total + value, 0);
+        const won = wins.reduce((total, value) => total + value, 0);
+        const result = (level) => {
+          const index = level - 1;
+          const attemptsForLevel = situations[index];
+          const winsForLevel = wins[index];
+          return `${winsForLevel}/${attemptsForLevel}${attemptsForLevel ? ` (${(winsForLevel / attemptsForLevel * 100).toFixed(1)}%)` : ''}`;
+        };
         return [
           a.nick, attempts, won, attempts - won,
-          `${(attempts ? won / attempts * 100 : 0).toFixed(1)}%`,
-          s(a, 'clutchKills'), s(a, 'c1v1Wins'), s(a, 'c1v2Wins'),
+          attempts ? `${(won / attempts * 100).toFixed(1)}%` : '—',
+          s(a, 'clutchKills'), result(1), result(2), result(3), result(4), result(5),
         ];
       })],
     ['Статистика по картам',
@@ -262,6 +287,7 @@ async function loadEseaMatches() {
     const season = getActiveSeason(state);
     if (!season) return setSeasonStatus('Активный сезон ESEA не найден. Проверьте настройки статистики ESEA.', true);
     const matches = Array.isArray(season.matches) ? season.matches : [];
+    seasonRosterIds = (season.players || []).map(player => player.faceitId).filter(Boolean);
     const ids = [...new Set(matches.map(match => match?.id).filter(id => typeof id === 'string' && /^1-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)).map(id => id.toLowerCase()))];
     if (!ids.length) return setSeasonStatus('В активном сезоне нет доступных матчей FACEIT. Сначала синхронизируйте статистику ESEA.', true);
 
@@ -313,7 +339,7 @@ async function runSeason() {
   if (!ok.length) {
     return setSeasonStatus(`Не нашёл завершённых матчей с командой ${CARD_TEAM_NAME} в этой выборке.`, true);
   }
-  seasonData = aggregate(ok.map(r => r.data));
+  seasonData = { ...aggregate(ok.map(r => r.data)), rosterIds: seasonRosterIds };
   renderSeason();
   const notes = [
     skipped ? `пропущено ${skipped}` : '',
