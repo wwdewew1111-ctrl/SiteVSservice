@@ -2,6 +2,7 @@ import { esc, logo, num } from './util.js';
 import { MATCH_RE, fetchMatch, fetchRounds, makeSideOf, collect, summarize, avgOf } from './faceit.js';
 import { getTeamLogo, setTeamLogo, storeImage } from './storage.js';
 import { downloadPng, copyPng } from './export.js';
+import { fetchEseaState, getActiveSeason } from '@/services/eseaService';
 
 const TEAM_ID = 'c55b7815-3739-4199-b1b7-d55eade7e489';
 const TEAM_NAME = 'TEAM KA6ANbl';
@@ -252,6 +253,38 @@ function renderSeason() {
   $('seasonResults').innerHTML = sections.map(([title, headers, rows], i) => seasonCard(i, title, headers, rows)).join('');
 }
 
+async function loadEseaMatches() {
+  const button = $('seasonLoadEsea');
+  button.disabled = true;
+  setSeasonStatus('⏳ Загрузка матчей активного сезона ESEA...');
+  try {
+    const state = await fetchEseaState();
+    const season = getActiveSeason(state);
+    if (!season) return setSeasonStatus('Активный сезон ESEA не найден. Проверьте настройки статистики ESEA.', true);
+    const matches = Array.isArray(season.matches) ? season.matches : [];
+    const ids = [...new Set(matches.map(match => match?.id).filter(id => typeof id === 'string' && /^1-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)).map(id => id.toLowerCase()))];
+    if (!ids.length) return setSeasonStatus('В активном сезоне нет доступных матчей FACEIT. Сначала синхронизируйте статистику ESEA.', true);
+
+    const field = $('seasonLinks');
+    const existing = parseLinks(field.value);
+    const knownIds = new Set(existing.ids.map(id => id.toLowerCase()));
+    const added = ids.filter(id => !knownIds.has(id.toLowerCase()));
+    const links = added.map(id => `https://www.faceit.com/ru/cs2/room/${id}`);
+    if (links.length) field.value = [field.value.trimEnd(), ...links].filter(Boolean).join('\n');
+    const total = parseLinks(field.value).ids.length;
+    const lastSync = Number(state.config.lastSync);
+    const syncTime = lastSync > 0 && Number.isFinite(lastSync) ? new Date(lastSync).toLocaleString('ru-RU') : 'нет данных';
+    const ignored = matches.length - matches.filter(match => typeof match?.id === 'string' && /^1-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(match.id)).length;
+    const warning = total > MAX_MATCHES ? ` В списке ${total} матчей — перед сборкой оставьте не более ${MAX_MATCHES}.` : '';
+    const invalidWarning = ignored ? ` Не распознано записей матчей: ${ignored}.` : '';
+    setSeasonStatus(`Сезон ${season.seasonTag || season.name}: найдено ${ids.length}, добавлено ${added.length}. Последняя синхронизация: ${syncTime}.${invalidWarning}${warning}`, total > MAX_MATCHES || ignored > 0);
+  } catch (error) {
+    setSeasonStatus(error instanceof Error ? error.message : 'Не удалось загрузить матчи из ESEA.', true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function runSeason() {
   const { ids, invalid } = parseLinks($('seasonLinks').value);
   if (!ids.length) return setSeasonStatus('Вставьте ссылки на матчи FACEIT (по одной в строке).', true);
@@ -323,6 +356,7 @@ async function saveSeasonLogo() {
   }
 }
 
+  $('seasonLoadEsea').onclick = loadEseaMatches;
   panel.querySelector('#seasonRun').onclick = runSeason;
   $('seasonLogoBtn').onclick = () => $('seasonLogoFile').click();
   $('seasonLogoFile').onchange = saveSeasonLogo;

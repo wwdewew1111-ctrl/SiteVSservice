@@ -82,7 +82,7 @@ const markup = `
 <div class="service-card-scroll"><div id="card" hidden></div></div>
 <section id="seasonPanel" class="bar" hidden>
   <textarea id="seasonLinks" class="field area" autocomplete="off" aria-label="Ссылки на матчи" placeholder="Ссылки на матчи FACEIT, по одной в строке (до 25)"></textarea>
-  <div class="line"><button id="seasonRun" class="btn primary">Собрать итоги сезона</button><button id="seasonLogoBtn" class="btn">Логотип команды</button><input id="seasonLogoFile" type="file" accept="image/*" hidden></div>
+  <div class="line"><button id="seasonLoadEsea" class="btn">Загрузить матчи из ESEA</button><button id="seasonRun" class="btn primary">Собрать итоги сезона</button><button id="seasonLogoBtn" class="btn">Логотип команды</button><input id="seasonLogoFile" type="file" accept="image/*" hidden></div>
   <div id="seasonStatus" class="status" role="status"></div><div id="seasonResults"></div>
 </section>
 <input id="teamLogoFile" type="file" accept="image/*" hidden>
