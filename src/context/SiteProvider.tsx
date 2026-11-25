@@ -92,7 +92,8 @@ export function SiteProvider({ children }: { children: ReactNode }) {
         return { ...current, ...result };
       });
       updateSectionStatus(section, 'loaded');
-    }).catch(() => {
+    }).catch((error: unknown) => {
+      console.error(`Failed to load site section: ${section}`, error);
       if (requestGeneration === generation.current) updateSectionStatus(section, 'error');
     }).finally(() => {
       if (pending.current[section] === request) delete pending.current[section];
@@ -128,6 +129,17 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     }
     void loadSection('settings');
   }, [isAdmin, loadAttempt, loadSection]);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    const retryFailedSections = () => {
+      for (const section of Object.keys(sectionStatusRef.current) as SiteSection[]) {
+        if (sectionStatusRef.current[section] === 'error') void loadSection(section);
+      }
+    };
+    window.addEventListener('online', retryFailedSections);
+    return () => window.removeEventListener('online', retryFailedSections);
+  }, [isAdmin, loadSection]);
 
   useEffect(() => {
     if (!supabase) return;
