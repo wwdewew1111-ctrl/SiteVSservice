@@ -8,6 +8,7 @@ import { AdminToolbar } from '@/components/admin/AdminToolbar';
 import { SortableList } from '@/components/admin/SortableList';
 import { MatchForm } from './MatchForm';
 import { MatchScoreEditor } from './MatchScoreEditor';
+import { FaceitSources } from './FaceitSources';
 import type { Match } from '@/types';
 
 function createBlankMatch(): Match {
@@ -55,6 +56,8 @@ export function MatchesAdmin() {
           </button>
         }
       />
+
+      <FaceitSources />
 
       {data.matches.length === 0 ? (
         <div className="card p-10 text-center text-muted">Матчей пока нет. Нажмите «Добавить матч», чтобы создать первый.</div>

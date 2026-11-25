@@ -47,7 +47,8 @@ const markup = `
 </div>
 <div id="bar" class="bar">
   <div id="matchPanel" class="panel">
-    <div class="line"><input id="input" class="field" type="text" autocomplete="off" aria-label="Ссылка на матч и название турнира" placeholder="Ссылка на матч FACEIT и название турнира"><button id="create" class="btn primary">Создать</button></div>
+    <div class="line"><select id="eseaSeason" class="field sel" aria-label="Сезон ESEA"><option value="">Сезон ESEA</option></select><select id="eseaMatch" class="field" aria-label="Матч ESEA"><option value="">Выберите матч из синхронизации ESEA</option></select><button id="loadEseaMatch" class="btn">Загрузить из ESEA</button></div>
+    <div class="line"><input id="input" class="field" type="text" autocomplete="off" aria-label="Ссылка на матч и название турнира" placeholder="Или ссылка на матч FACEIT и название турнира"><button id="create" class="btn primary">Создать</button></div>
     <div id="teamLogos" class="line"></div>
   </div>
   <div id="previewPanel" class="panel" hidden>
@@ -83,6 +84,8 @@ const markup = `
 <section id="seasonPanel" class="bar" hidden>
   <textarea id="seasonLinks" class="field area" autocomplete="off" aria-label="Ссылки на матчи" placeholder="Ссылки на матчи FACEIT, по одной в строке (до 25)"></textarea>
   <div class="line"><button id="seasonLoadEsea" class="btn">Загрузить матчи из ESEA</button><button id="seasonRun" class="btn primary">Собрать итоги сезона</button><button id="seasonLogoBtn" class="btn">Логотип команды</button><input id="seasonLogoFile" type="file" accept="image/*" hidden></div>
+  <div class="line"><select id="seasonSummarySelect" class="field sel" aria-label="Сезон для сводной карточки"><option value="">Выберите сезон</option></select><button id="seasonSummaryLoad" class="btn">Загрузить сезоны ESEA</button><button id="seasonSummaryRun" class="btn primary">Карточка сезона</button></div>
+  <div class="line"><select id="seasonMatchSelect" class="field" aria-label="Матч для карточки"><option value="">Выберите матч</option></select><button id="seasonMatchRun" class="btn primary">Карточка матча</button></div>
   <div id="seasonStatus" class="status" role="status"></div><div id="seasonResults"></div>
 </section>
 <input id="teamLogoFile" type="file" accept="image/*" hidden>

@@ -27,7 +27,11 @@ export interface PlayerStat {
 export interface EseaMatch {
   id: string;
   opponent: string;
+  opponentLogo?: string;
+  teamLogo?: string;
   date: string;
+  time?: string;
+  maps?: string[];
   score: string;
   players: PlayerStat[];
 }

@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { faceitGet, parseTeamGuid, RequestError, type Json } from "./faceit.ts";
 import { syncTeamMatches } from "./matchSync.ts";
+import { addFaceitSource, readFaceitSources, removeFaceitSource } from "./matchSources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -410,10 +411,16 @@ async function syncEsea(): Promise<Response> {
       const total = faceit ? matchTotals.get(faceit.nickname.toLowerCase()) : undefined;
       return total?.maps ? [playerStats({ ...player, faceitId: faceit?.id }, faceitNick, total)] : [];
     });
+    const finishedDate = finishedAt > 0 && Number.isFinite(finishedAt) && Number.isFinite(new Date(finishedAt * 1000).getTime())
+      ? new Date(finishedAt * 1000)
+      : null;
     matchStats.push({
       id: String(match.match_id),
       opponent: String(opponentFaction?.name || opponent || "Соперник"),
-      date: finishedAt > 0 ? new Date(finishedAt * 1000).toISOString().slice(0, 10) : "",
+      opponentLogo: typeof opponentFaction?.avatar === "string" ? opponentFaction.avatar : "",
+      date: finishedDate ? finishedDate.toISOString().slice(0, 10) : "",
+      time: finishedDate ? finishedDate.toISOString().slice(11, 16) : "",
+      maps: rounds.map((round) => String((round.round_stats as Json | null)?.Map ?? "").replace(/^de_/, "")).filter(Boolean),
       score: mapScores.length === 1 ? mapScores[0] : mapScores.length > 1 ? `${ourMaps}:${oppMaps}` : "",
       players: matchPlayers,
     });
@@ -512,7 +519,8 @@ async function runSyncTick(mode: "live" | "full"): Promise<void> {
   if (!apiKey || !teamId) throw new Error("FACEIT API key or team ID is not configured");
 
   const anchorMatchIds = Array.isArray(config.extraMatchIds) ? config.extraMatchIds.map(String) : [];
-  await syncTeamMatches(supabase, apiKey, teamId, mode, anchorMatchIds);
+  const sources = mode === "full" ? await readFaceitSources(supabase) : [];
+  await syncTeamMatches(supabase, apiKey, teamId, mode, anchorMatchIds, sources.map((source) => source.id));
   const lastSync = Number(config.lastSync ?? 0);
   if (mode === "full" && config.autoSync === true && Date.now() - lastSync > ESEA_SYNC_INTERVAL_MS) {
     await runStep("Автообновление статистики ESEA", () => syncEsea());
@@ -555,6 +563,20 @@ Deno.serve(async (req: Request) => {
         return await reorderRows(body.table, body.ids);
       case "cron_tick":
         return await cronTick(req, body);
+      case "match_source_add":
+      case "match_source_remove": {
+        await requireAdmin(body.token);
+        if (body.action === "match_source_remove") {
+          const sources = await removeFaceitSource(supabase, body.id);
+          return json({ ok: true, sources });
+        }
+        const apiKey = await readSecret(FACEIT_KEY_NAME);
+        const config = ((await readEseaState("config")) ?? {}) as Json;
+        const teamId = parseTeamGuid(config.teamId);
+        if (!apiKey || !teamId) throw new RequestError("Сначала настройте ключ FACEIT и ID команды в разделе «Статистика ESEA».", 400);
+        const result = await addFaceitSource(supabase, apiKey, teamId, body.kind, body.input);
+        return json({ ok: true, ...result });
+      }
       case "service_faceit":
         await requireAdmin(body.token);
         return await serviceFaceit(body);

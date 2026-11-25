@@ -3,6 +3,7 @@ import { MATCH_RE, faceitGet, fetchMatch, fetchRounds, makeSideOf, collect, summ
 import { getFooterLogo, setFooterLogo, getTeamLogo, setTeamLogo, getTeamName, setTeamName, readImageFile, storeImage } from './storage.js';
 import { downloadPng, copyPng } from './export.js';
 import { initSeason } from './season.js';
+import { fetchEseaState, getActiveSeason } from '@/services/eseaService';
 
 export function initService(root) {
   const PLAYER_RE = /faceit\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?players\/([^/?#\s]+)/i;
@@ -14,6 +15,7 @@ const previewOptions = $('previewOptions'), previewTeamLogos = $('previewTeamLog
 const previewTitle = $('previewTitle'), previewSubtitle = $('previewSubtitle'), previewDate = $('previewDate');
 const previewTime = $('previewTime'), previewFormat = $('previewFormat'), previewTheme = $('previewTheme');
 const input = $('input'), createBtn = $('create'), teamLogos = $('teamLogos'), teamLogoFile = $('teamLogoFile');
+  const eseaSeason = $('eseaSeason'), eseaMatch = $('eseaMatch'), loadEseaMatchBtn = $('loadEseaMatch');
 const pMatch = $('pMatch'), pMap = $('pMap'), pPlayer = $('pPlayer'), pNick = $('pNick'), pTheme = $('pTheme');
 const pPhotoBtn = $('pPhotoBtn'), pPhotoFile = $('pPhotoFile'), pPhotoUrl = $('pPhotoUrl'), pCreate = $('pCreate');
 const logoBtn = $('logoBtn'), logoFile = $('logoFile'), dlBtn = $('dl'), cpBtn = $('cp');
@@ -28,6 +30,8 @@ let preview = null;
 let player = null;
 let userPhoto = null;
 let matchCache = null;
+let eseaSeasons = [];
+let eseaTeamId = '';
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -107,6 +111,7 @@ function teamHtml(t) {
 }
 
 function renderMatch(d) {
+  if (d.source === 'esea') return renderEseaMatch(d);
   const [t1, t2] = d.teams;
   const titleText = d.title || `${t1.name} vs ${t2.name}`;
   const titleCls = titleText.length > 34 ? 'xlong' : titleText.length > 22 ? 'long' : '';
@@ -135,6 +140,26 @@ function renderMatch(d) {
       <div class="center">${footerLogoHtml}<span class="brand">КАБАНЫ <b>ЕСПОРТС</b></span></div>
       <div class="right">${new Date().toLocaleDateString('ru-RU')}</div>
     </div>`;
+}
+
+function renderEseaMatch(d) {
+  const [t1, t2] = d.teams;
+  const titleText = d.title || d.tournament || `${t1.name} vs ${t2.name}`;
+  const dateText = /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') ? d.date.split('-').reverse().join('.') : 'Дата не указана';
+  const timeText = d.time ? `Окончание: ${d.time} UTC` : 'Время окончания не указано';
+  const mapsText = d.mapNames?.length ? d.mapNames.join(' · ').toUpperCase() : 'Карта не указана';
+  const players = t1.players;
+  const rows = players.map(p => {
+    const diff = p.k - p.d;
+    const role = p.role ? `<span class="role-badge">${esc(p.role)}</span>` : '';
+    const hs = p.hsPct === null ? '—' : `${p.hsPct.toFixed(1)}%`;
+    const rating = p.rtg === null ? '—' : p.rtg.toFixed(2);
+    return `<tr><td><strong>${esc(p.nick)}</strong>${role}</td><td>${p.maps}</td><td>${p.k} - ${p.d}</td><td class="${diff >= 0 ? 'positive' : 'negative'}">${diff > 0 ? '+' : ''}${diff}</td><td>${(p.k / Math.max(p.d, 1)).toFixed(2)}</td><td>${p.adr === null ? '—' : p.adr.toFixed(1)}</td><td>${hs}</td><td class="rating ${p.rtg !== null && p.rtg >= 1 ? 'positive' : ''}">${rating}</td></tr>`;
+  }).join('');
+  const footerLogo = getFooterLogo();
+  const footerLogoHtml = footerLogo ? `<img src="${esc(footerLogo)}" alt="">` : '';
+  card.className = 'match-stats-card';
+  card.innerHTML = `<div class="match-card-head"><div class="wm-row"><span>ESEA</span><span>${esc(d.season || '')}</span></div><div class="match-competition">${esc(titleText)}</div><div class="match-versus"><div>${logo(t1.logo, t1.name, 'match-logo')}<strong>${esc(t1.name)}</strong></div><div class="match-score"><span class="${t1.win ? 'win' : ''}">${d.series[1]}</span><b>:</b><span class="${t2.win ? 'win' : ''}">${d.series[2]}</span></div><div>${logo(t2.logo, t2.name, 'match-logo')}<strong>${esc(t2.name)}</strong></div></div><div class="match-meta"><span>${esc(dateText)}</span><span>${esc(timeText)}</span><span>${esc(mapsText)}</span></div></div><div class="match-stats-table-wrap"><table class="match-stats-table"><thead><tr><th>Игрок</th><th>Карты</th><th>K - D</th><th>+/-</th><th>K/D</th><th>ADR</th><th>HS%</th><th>Rating ▼</th></tr></thead><tbody>${rows}</tbody></table></div><div class="match-card-footer"><span>ESEA MATCH</span><span>${footerLogoHtml} КАБАНЫ ЕСПОРТС</span><span>${esc(d.matchId)}</span></div>`;
 }
 
 function previewTeam(fac, side) {
@@ -254,6 +279,69 @@ function show() {
   card.hidden = !(hasMatch || hasPreview || hasPlayer || hasStatement);
   dlBtn.disabled = card.hidden;
   cpBtn.disabled = card.hidden;
+}
+
+async function loadEseaMatches() {
+  loadEseaMatchBtn.disabled = true;
+  setStatus('⏳ Загрузка матчей из синхронизации ESEA...');
+  try {
+    const state = await fetchEseaState();
+    eseaSeasons = state.seasons || [];
+    eseaTeamId = state.config.teamId || 'c55b7815-3739-4199-b1b7-d55eade7e489';
+    eseaSeason.innerHTML = eseaSeasons.map(season => `<option value="${esc(season.id)}">${esc(season.seasonTag)} · ${esc(season.name)}</option>`).join('');
+    const active = getActiveSeason(state) || eseaSeasons[0];
+    if (!active) throw new Error('В синхронизации ESEA пока нет сезонов.');
+    eseaSeason.value = active.id;
+    const matches = active.matches || [];
+    eseaMatch.innerHTML = `<option value="">Выберите матч из синхронизации ESEA</option>` + matches.map(match => `<option value="${esc(match.id)}">${esc(match.date || '')} ${esc(match.time || '')} · vs ${esc(match.opponent)} · ${esc(match.score)}</option>`).join('');
+    setStatus(`✅ Загружено матчей из ${active.seasonTag}: ${matches.length}.`);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'Не удалось загрузить матчи ESEA.', true);
+  } finally {
+    loadEseaMatchBtn.disabled = false;
+  }
+}
+
+function selectEseaSeason() {
+  try {
+    const season = eseaSeasons.find(item => item.id === eseaSeason.value);
+    const matches = season?.matches || [];
+    eseaMatch.innerHTML = `<option value="">Выберите матч из синхронизации ESEA</option>` + matches.map(match => `<option value="${esc(match.id)}">${esc(match.date || '')} ${esc(match.time || '')} · vs ${esc(match.opponent)} · ${esc(match.score)}</option>`).join('');
+  } catch {
+    setStatus('Не удалось обновить список матчей ESEA.', true);
+  }
+}
+
+function generateEseaMatch() {
+  const season = eseaSeasons.find(item => item.id === eseaSeason.value);
+  const match = season?.matches?.find(item => item.id === eseaMatch.value);
+  if (!match) return setStatus('Выберите матч из синхронизации ESEA.', true);
+  const players = Array.isArray(match.players) ? match.players : [];
+  const score = /^(\d+)\s*:\s*(\d+)$/.exec(String(match.score || ''));
+  const opponentId = `esea-opponent:${match.opponent || match.id}`;
+  const team = (id, faceitName, fallbackLogo, stats) => ({
+    id, faceitName, name: getTeamName(id) || faceitName,
+    logo: getTeamLogo(id) || fallbackLogo || '', win: false, players: stats,
+  });
+  current = {
+    source: 'esea', matchId: match.id, title: season.name, season: season.seasonTag,
+    date: match.date, time: match.time, mapNames: Array.isArray(match.maps) ? match.maps : [],
+    series: { 1: score ? Number(score[1]) : '—', 2: score ? Number(score[2]) : '—' },
+    teams: [
+      team(eseaTeamId, 'КАБАНЫ ЕСПОРТС', match.teamLogo, players.map(p => ({
+        nick: p.nickname || p.faceitNick || 'Игрок', role: p.role || '', maps: num(p.maps) ?? 0,
+        k: num(p.kills) ?? 0, d: num(p.deaths) ?? 0, adr: num(p.adr), hsPct: num(p.hsPercent), rtg: num(p.rating),
+      })).sort((a, b) => (b.rtg ?? -Infinity) - (a.rtg ?? -Infinity))),
+      team(opponentId, match.opponent || 'Соперник', match.opponentLogo, []),
+    ],
+  };
+  if (score) {
+    current.teams[0].win = current.series[1] > current.series[2];
+    current.teams[1].win = current.series[2] > current.series[1];
+  }
+  renderTeamLogoButtons(current);
+  setStatus(players.length ? '✅ Карточка матча ESEA готова.' : 'Карточка создана, но статистика игроков для этого матча отсутствует.', !players.length);
+  show();
 }
 
 function renderTeamLogoButtons(d) {
@@ -412,7 +500,7 @@ previewTeamLogos.addEventListener('input', e => {
   if (!id) return setStatus('FACEIT пока не предоставил идентификатор команды.', true);
   try {
     setTeamName(id, e.target.value.trim());
-    if (current && matchCache?.matchId === current.matchId) {
+    if (current?.source !== 'esea' && current && matchCache?.matchId === current.matchId) {
       current = buildData(matchCache, current.title);
       renderTeamLogoButtons(current);
     }
@@ -424,6 +512,9 @@ previewTeamLogos.addEventListener('input', e => {
 
 createBtn.onclick = generate;
 input.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+loadEseaMatchBtn.onclick = loadEseaMatches;
+eseaSeason.addEventListener('change', selectEseaSeason);
+eseaMatch.addEventListener('change', generateEseaMatch);
 
 teamLogos.addEventListener('click', e => {
   const btn = e.target.closest('[data-team]');
@@ -433,8 +524,14 @@ teamLogos.addEventListener('click', e => {
 });
 teamLogos.addEventListener('input', e => {
   if (!e.target.matches('[data-team-name]')) return;
-  setTeamName(e.target.dataset.teamName, e.target.value.trim());
-  current = buildData(matchCache, current.title);
+  const id = e.target.dataset.teamName;
+  setTeamName(id, e.target.value.trim());
+  if (current?.source === 'esea') {
+    const team = current.teams.find(item => item.id === id);
+    if (team) team.name = getTeamName(id) || team.faceitName;
+  } else if (current && matchCache?.matchId === current.matchId) {
+    current = buildData(matchCache, current.title);
+  }
   if (preview) renderPreviewTeamControls();
   show();
 });
@@ -445,7 +542,12 @@ teamLogoFile.onchange = async () => {
   if (!file) return;
   try {
     await storeImage(file, url => setTeamLogo(id, url));
-    if (current && matchCache?.matchId === current.matchId) current = buildData(matchCache, current.title);
+    if (current?.source === 'esea') {
+      const team = current.teams.find(item => item.id === id);
+      if (team) team.logo = getTeamLogo(id);
+    } else if (current && matchCache?.matchId === current.matchId) {
+      current = buildData(matchCache, current.title);
+    }
     setStatus('✅ Логотип сохранён!');
     show();
   } catch (e) {

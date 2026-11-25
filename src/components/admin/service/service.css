@@ -54,6 +54,41 @@
 .service-tool .footer .center .brand b { color: #ff1a2b; }
 .service-tool .footer::after { content: ""; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 170px; height: 5px; background: #ff1a2b; border-radius: 4px 4px 0 0; box-shadow: 0 0 16px rgba(255,26,43,0.8); }
 
+/* ESEA season/match cards: visual preview treatment with team marks and compact stats. */
+.service-tool .season-card { width: 850px; padding: 0; overflow: hidden; background: #0d1018; color: #f5f7fb; }
+.service-tool .season-art { position: relative; min-height: 850px; overflow: hidden; padding: 38px 54px 46px; box-sizing: border-box; background: repeating-linear-gradient(135deg, transparent 0 31px, rgba(255,255,255,.035) 31px 32px), radial-gradient(ellipse at center, #242731, #0b0d15 76%); }
+.service-tool .season-art::before { content: 'ИТОГИ'; position: absolute; top: 190px; left: 50%; width: 1000px; color: rgba(255,255,255,.035); font: italic 700 205px/1 'Oswald', sans-serif; text-align: center; white-space: nowrap; transform: translateX(-50%) rotate(-13deg); pointer-events: none; }
+.service-tool .season-frame { position: absolute; inset: 21px; border: 1px solid rgba(255,255,255,.25); pointer-events: none; }
+.service-tool .season-top, .service-tool .season-footer { position: relative; z-index: 1; display: flex; justify-content: space-between; color: #7d8799; font-size: 9px; font-weight: 800; letter-spacing: 3px; }
+.service-tool .season-label { color: #ef1834; }
+.service-tool .season-heading { position: relative; z-index: 1; margin: 50px 0 28px; text-align: center; text-transform: uppercase; }
+.service-tool .season-heading small { color: #ef1834; font-size: 12px; font-weight: 900; letter-spacing: 4px; }
+.service-tool .season-heading h2 { margin: 8px 0 5px; color: #f7f8fc; font: 700 34px/1.1 'Oswald', sans-serif; }
+.service-tool .season-heading p { margin: 0; color: #7d8799; font-size: 10px; font-weight: 800; letter-spacing: 4px; }
+.service-tool .season-versus { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 120px 1fr; align-items: center; justify-items: center; min-height: 265px; }
+.service-tool .season-team { display: flex; width: 100%; flex-direction: column; align-items: center; gap: 15px; text-align: center; }
+.service-tool .season-team-logo { width: 150px; height: 150px; }
+.service-tool .season-team-logo .ph { font-size: 42px; }
+.service-tool .season-team strong { max-width: 220px; color: #f5f7fb; font: italic 700 25px/1.05 'Oswald', sans-serif; text-transform: uppercase; }
+.service-tool .season-vs { color: #ef1834; font: italic 700 58px/1 'Oswald', sans-serif; }
+.service-tool .season-vs b { margin: 0 8px; color: #768096; font-size: 34px; }
+.service-tool .season-stats { position: relative; z-index: 1; margin: 14px 0 0; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: rgba(4,6,11,.78); }
+.service-tool .season-stats table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; font-variant-numeric: tabular-nums; }
+.service-tool .season-stats th { padding: 8px 4px; color: #ef1834; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,.15); }
+.service-tool .season-stats td { padding: 8px 4px; color: #e7eaf0; text-align: center; border-bottom: 1px solid rgba(255,255,255,.07); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.service-tool .season-stats td:first-child, .service-tool .season-stats th:first-child { text-align: left; padding-left: 10px; }
+.service-tool .season-stats tr:last-child td { border-bottom: 0; }
+.service-tool .season-footer { position: absolute; right: 54px; bottom: 43px; left: 54px; letter-spacing: 2px; }
+.service-tool .season-accent { position: absolute; bottom: 0; left: 50%; width: 260px; height: 10px; transform: translateX(-50%); background: #f4ff00; }
+.service-tool .season-summary-mark { position: relative; z-index: 1; display: flex; min-height: 265px; align-items: center; justify-content: center; gap: 25px; color: #f5f7fb; font: italic 700 42px/1 'Oswald', sans-serif; text-transform: uppercase; }
+.service-tool .season-summary-logo { width: 190px; height: 190px; }
+.service-tool .season-summary-logo .ph { font-size: 56px; }
+.service-tool .season-summary-team { display: flex; flex-direction: column; align-items: flex-start; }
+.service-tool .season-record { margin-top: 14px; color: #f5f7fb; font: 700 30px/1 'Oswald', sans-serif; }
+.service-tool .season-record-wins { color: #2ecc71; }
+.service-tool .season-record-losses { color: #ef1834; }
+.service-tool .season-record small { display: block; margin-top: 7px; color: #7d8799; font: 800 9px/1.3 'Inter', sans-serif; letter-spacing: 1px; }
+
 /* FACEIT match preview: fixed square canvas also used for PNG export. */
 .service-tool #card.preview-mode { width: 850px; height: 850px; padding: 0; color: #111827; background: #ededeb; }
 .service-tool #card.preview-mode::before { display: none; }
@@ -154,6 +189,33 @@
 .service-tool .season-card table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 .service-tool .season-card th { font-size: 9px; letter-spacing: 1px; color: #8a6a6e; font-weight: 600; text-align: center; padding: 6px 4px; border-bottom: 1px solid #2e1216; }
 .service-tool .season-card td { text-align: center; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; }
+
+.service-tool #card.match-stats-card { width: 1100px; padding: 0; background: #111214; color: #f5f5f5; }
+.service-tool .match-card-head { padding: 22px 28px 20px; background: linear-gradient(135deg, #171719, #101011); border-bottom: 1px solid #2e2e31; }
+.service-tool .match-competition { margin: 12px 0 18px; color: #ff3946; font: 700 18px 'Oswald', sans-serif; letter-spacing: 1px; text-align: center; text-transform: uppercase; }
+.service-tool .match-versus { display: grid; grid-template-columns: 1fr 180px 1fr; align-items: center; gap: 20px; text-align: center; }
+.service-tool .match-versus > div { display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; font: 700 18px 'Oswald', sans-serif; text-transform: uppercase; }
+.service-tool .match-versus > div:last-child { flex-direction: row-reverse; }
+.service-tool .match-logo { width: 58px; height: 58px; }
+.service-tool .match-score { font: 700 48px 'Oswald', sans-serif !important; }
+.service-tool .match-score b { color: #777; font-size: 28px; }
+.service-tool .match-score .win { color: #ff3946; }
+.service-tool .match-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; margin-top: 20px; color: #b4b4bb; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.service-tool .match-stats-table-wrap { overflow-x: auto; }
+.service-tool .match-stats-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.service-tool .match-stats-table th { padding: 13px 14px; color: #a7a7ad; background: #19191b; border-bottom: 1px solid #2e2e31; font-size: 10px; letter-spacing: 1px; text-align: right; text-transform: uppercase; white-space: nowrap; }
+.service-tool .match-stats-table th:first-child, .service-tool .match-stats-table td:first-child { text-align: left; }
+.service-tool .match-stats-table td { padding: 13px 14px; border-bottom: 1px solid #29292c; text-align: right; font-weight: 600; white-space: nowrap; }
+.service-tool .match-stats-table tr:last-child td { border-bottom: 0; }
+.service-tool .match-stats-table td:first-child { min-width: 190px; }
+.service-tool .match-stats-table td:first-child strong { display: inline-block; margin-right: 8px; }
+.service-tool .role-badge { display: inline-block; padding: 3px 5px; border: 1px solid #e33a45; border-radius: 3px; color: #ff4c58; font-size: 9px; letter-spacing: .5px; text-transform: uppercase; }
+.service-tool .positive { color: #27db6f; }
+.service-tool .negative { color: #ff3946; }
+.service-tool .match-stats-table .rating { font-weight: 800; }
+.service-tool .match-card-footer { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 16px 28px; color: #777980; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+.service-tool .match-card-footer span:nth-child(2) { display: inline-flex; align-items: center; gap: 8px; color: #d8d8dc; }
+.service-tool .match-card-footer img { max-height: 28px; width: auto; }
 .service-tool .season-card th:first-child, .service-tool .season-card td:first-child { text-align: left; white-space: nowrap; }
 
 /* Official statement generator */

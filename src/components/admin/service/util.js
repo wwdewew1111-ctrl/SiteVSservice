@@ -9,7 +9,7 @@ export const num = v => {
 
 export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-export const imageSrc = url => url.startsWith('data:')
+export const imageSrc = url => url.startsWith('data:') || (url.startsWith('/') && !url.startsWith('//'))
   ? url
   : `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=png`;
 

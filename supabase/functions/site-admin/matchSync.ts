@@ -1,6 +1,6 @@
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { faceitGet, type Json } from "./faceit.ts";
+import { faceitGet, RequestError, type Json } from "./faceit.ts";
 
 type Phase = "upcoming" | "live" | "finished";
 type MatchFormat = "bo1" | "bo3" | "bo5";
@@ -70,16 +70,20 @@ async function fetchMaps(matchId: string, teamId: string, apiKey: string): Promi
   return maps;
 }
 
-async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, matchId: string): Promise<void> {
+export async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, matchId: string, strict = false): Promise<void> {
   const details = await faceitGet(`/matches/${encodeURIComponent(matchId)}`, apiKey);
   const phase = phaseFromStatus(String(details.status ?? ""));
-  if (!phase) return;
+  if (!phase) {
+    if (strict) throw new RequestError("Матч отменён или прерван", 400);
+    return;
+  }
 
   const teams = (details.teams ?? {}) as Record<string, Json | undefined>;
 
   const factions = [teams.faction1, teams.faction2].filter((faction): faction is Json => Boolean(faction));
   const opponent = factions.find((faction) => faction.faction_id !== teamId);
   if (!opponent || !factions.some((faction) => faction.faction_id === teamId)) {
+    if (strict) throw new RequestError("В матче FACEIT не найдена настроенная команда", 400);
     console.error("FACEIT match does not include our team", { matchId });
     return;
   }
@@ -94,6 +98,7 @@ async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, 
     }
   }
   if (phase === "finished" && maps.length === 0) {
+    if (strict) throw new RequestError(`Итоги матча ${matchId} ещё не опубликованы`, 400);
     throw new Error(`Итоги матча ${matchId} ещё не опубликованы`);
   }
 
@@ -149,7 +154,8 @@ async function refreshMatch(db: SupabaseClient, apiKey: string, teamId: string, 
   if (error) throw error;
 }
 
-const FACEIT_MATCH_ID_RE = /^1-[0-9a-f-]{36}$/i;
+export const FACEIT_MATCH_ID_RE = /^1-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const CHAMPIONSHIP_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CHAMPIONSHIP_PAGE_SIZE = 100;
 const CHAMPIONSHIP_MAX_PAGES = 5;
 
@@ -159,13 +165,13 @@ async function trackedMatchIds(db: SupabaseClient, phases: Phase[]): Promise<str
   return (data ?? []).map((row) => String(row.id));
 }
 
-async function championshipIdOf(matchId: string, apiKey: string): Promise<string | null> {
+export async function championshipIdOf(matchId: string, apiKey: string): Promise<string | null> {
   const details = await faceitGet(`/matches/${encodeURIComponent(matchId)}`, apiKey);
   if (details.competition_type !== "championship" || typeof details.competition_id !== "string") return null;
   return details.competition_id;
 }
 
-async function championshipTeamMatchIds(
+export async function championshipTeamMatchIds(
   championshipId: string,
   teamId: string,
   apiKey: string,
@@ -189,19 +195,31 @@ async function championshipTeamMatchIds(
   return ids;
 }
 
-async function scheduledMatchIds(db: SupabaseClient, teamId: string, apiKey: string, anchorMatchIds: string[]): Promise<string[]> {
+async function scheduledMatchIds(
+  db: SupabaseClient,
+  teamId: string,
+  apiKey: string,
+  anchorMatchIds: string[],
+  championshipIds: string[],
+): Promise<string[]> {
   const tracked = await trackedMatchIds(db, ["upcoming", "live"]);
   const anchor = anchorMatchIds.find((id) => FACEIT_MATCH_ID_RE.test(id));
-  let discovered: string[] = [];
+  const championships = new Set(championshipIds.filter((id) => CHAMPIONSHIP_ID_RE.test(id)).map((id) => id.toLowerCase()));
   try {
-    const championshipId = anchor ? await championshipIdOf(anchor, apiKey) : null;
-    if (championshipId) {
-      const upcoming = await championshipTeamMatchIds(championshipId, teamId, apiKey, "upcoming");
-      const ongoing = await championshipTeamMatchIds(championshipId, teamId, apiKey, "ongoing");
-      discovered = [...upcoming, ...ongoing];
-    }
+    const legacyId = anchor ? await championshipIdOf(anchor, apiKey) : null;
+    if (legacyId && CHAMPIONSHIP_ID_RE.test(legacyId)) championships.add(legacyId.toLowerCase());
   } catch (error) {
-    console.error("FACEIT match discovery failed; refreshing tracked matches", { error });
+    console.error("FACEIT legacy championship discovery failed", { error });
+  }
+  const discovered: string[] = [];
+  for (const championshipId of championships) {
+    for (const type of ["upcoming", "ongoing"] as const) {
+      try {
+        discovered.push(...await championshipTeamMatchIds(championshipId, teamId, apiKey, type));
+      } catch (error) {
+        console.error("FACEIT championship discovery failed", { championshipId, type, error });
+      }
+    }
   }
   return [...new Set([...tracked, ...discovered])];
 }
@@ -212,8 +230,11 @@ export async function syncTeamMatches(
   teamId: string,
   mode: SyncMode,
   anchorMatchIds: string[] = [],
+  championshipIds: string[] = [],
 ): Promise<void> {
-  const ids = mode === "live" ? await trackedMatchIds(db, ["upcoming", "live"]) : await scheduledMatchIds(db, teamId, apiKey, anchorMatchIds);
+  const ids = mode === "live"
+    ? await trackedMatchIds(db, ["upcoming", "live"])
+    : await scheduledMatchIds(db, teamId, apiKey, anchorMatchIds, championshipIds);
   let failures = 0;
   for (const id of ids) {
     if (!FACEIT_MATCH_ID_RE.test(id)) continue;

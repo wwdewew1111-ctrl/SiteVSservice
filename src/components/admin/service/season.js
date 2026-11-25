@@ -3,6 +3,7 @@ import { MATCH_RE, fetchMatch, fetchRounds, makeSideOf, collect, summarize, avgO
 import { getTeamLogo, setTeamLogo, storeImage } from './storage.js';
 import { downloadPng, copyPng } from './export.js';
 import { fetchEseaState, getActiveSeason } from '@/services/eseaService';
+import { DEFAULT_TEAM_LOGO } from '@/lib/teamLogo';
 
 const TEAM_ID = 'c55b7815-3739-4199-b1b7-d55eade7e489';
 const TEAM_NAME = 'TEAM KA6ANbl';
@@ -57,6 +58,9 @@ const $ = id => root.querySelector(`#${id}`);
   const panel = $('seasonPanel');
   let seasonData = null;
   let seasonRosterIds = [];
+  let summarySeasons = [];
+  let summarySeason = null;
+  let summaryMatch = null;
 
   const readStat = (ps, aliases) => {
     for (const key of aliases) {
@@ -196,14 +200,32 @@ async function mapLimit(items, limit, task) {
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }
 
-function seasonCard(index, title, headers, rows) {
+function seasonCard(index, title, headers, rows, match = null, teamStats = null) {
+  const homeLogo = DEFAULT_TEAM_LOGO;
+  const wins = teamStats?.wins;
+  const losses = teamStats?.losses;
+  const hasRecord = Number.isInteger(wins) && wins >= 0 && Number.isInteger(losses) && losses >= 0;
+  const awayId = match?.opponentId || `esea-opponent:${match?.id || 'unknown'}`;
+  const awayLogo = match?.opponentLogo || getTeamLogo(awayId);
+  const score = String(match?.score || '—:—').replace(/\s+/g, '');
+  const scoreParts = score.split(':');
+  const stats = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+  const statHeaders = headers.map(h => `<th>${esc(h)}</th>`).join('');
+  const visualTitle = match ? 'MATCH DAY' : 'SEASON SUMMARY';
   return `<div class="season-item">
-    <section class="season-card">
-      <header class="sc-head">${logo(getTeamLogo(TEAM_ID), CARD_TEAM_NAME, 'sc-logo')}<div><div class="sc-team">${esc(CARD_TEAM_NAME)}</div><h2>${esc(title)}</h2></div></header>
-      <table>
-        <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
-        <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table>
+    <section class="season-card${match ? ' season-match-card' : ' season-summary-card'}">
+      <div class="season-art">
+        <div class="season-frame"></div>
+        <div class="season-top"><span class="season-label">● ${visualTitle}</span><span>ESEA / CS2</span></div>
+        <div class="season-heading"><small>${match ? 'ЗАВЕРШЁННЫЙ МАТЧ' : 'ИТОГИ СЕЗОНА'}</small><h2>${esc(title)}</h2><p>${esc(match ? 'MATCH STATISTICS' : 'TEAM PERFORMANCE')}</p></div>
+        ${match ? `<div class="season-versus">
+          <div class="season-team">${logo(homeLogo, CARD_TEAM_NAME, 'season-team-logo')}<strong>${esc(CARD_TEAM_NAME)}</strong></div>
+          <div class="season-vs">${esc(scoreParts[0] || '—')}<b>:</b>${esc(scoreParts[1] || '—')}</div>
+          <div class="season-team">${logo(awayLogo, match.opponent || 'СОПЕРНИК', 'season-team-logo')}<strong>${esc(match.opponent || 'СОПЕРНИК')}</strong></div>
+        </div>` : `<div class="season-summary-mark"><span>${logo(homeLogo, CARD_TEAM_NAME, 'season-summary-logo')}</span><div class="season-summary-team"><strong>КАБАНЫ<br>ЕСПОРТС</strong>${hasRecord ? `<div class="season-record"><div><span class="season-record-wins">${wins}</span> – <span class="season-record-losses">${losses}</span></div><small>ПОБЕДЫ / ПОРАЖЕНИЯ · МАТЧЕЙ: ${wins + losses}</small></div>` : ''}</div></div>`}
+        <div class="season-stats"><table><thead><tr>${statHeaders}</tr></thead><tbody>${stats}</tbody></table></div>
+        <div class="season-footer"><span>VK.RU / КАБАНЫ ЕСПОРТС</span><span>КАБАНЫ ЕСПОРТС</span></div><div class="season-accent"></div>
+      </div>
     </section>
     <div class="line">
       <button class="btn" data-action="download" data-index="${index}">Скачать PNG</button>
@@ -278,6 +300,71 @@ function renderSeason() {
   $('seasonResults').innerHTML = sections.map(([title, headers, rows], i) => seasonCard(i, title, headers, rows)).join('');
 }
 
+async function loadSummarySeasons() {
+  const button = $('seasonSummaryLoad');
+  button.disabled = true;
+  setSeasonStatus('⏳ Загрузка сезонов ESEA...');
+  try {
+    const state = await fetchEseaState();
+    summarySeasons = state.seasons || [];
+    const select = $('seasonSummarySelect');
+    select.innerHTML = '<option value="">Выберите сезон</option>' + summarySeasons.map(season => `<option value="${esc(season.id)}">${esc(season.seasonTag)} · ${esc(season.name)}</option>`).join('');
+    const active = getActiveSeason(state);
+    if (active) select.value = active.id;
+    updateSummaryMatches();
+    setSeasonStatus(`✅ Загружено сезонов: ${summarySeasons.length}.`);
+  } catch (error) {
+    setSeasonStatus(error instanceof Error ? error.message : 'Не удалось загрузить сезоны ESEA.', true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function updateSummaryMatches() {
+  const season = summarySeasons.find(item => item.id === $('seasonSummarySelect').value);
+  const matches = Array.isArray(season?.matches) ? season.matches : [];
+  $('seasonMatchSelect').innerHTML = '<option value="">Выберите матч</option>' + matches.map(match => {
+    const title = `${CARD_TEAM_NAME} vs ${match.opponent || 'Соперник'}`;
+    const details = [match.date, match.score].filter(Boolean).join(' · ');
+    return `<option value="${esc(match.id)}">${esc(title)}${details ? ` · ${esc(details)}` : ''}</option>`;
+  }).join('');
+}
+
+function renderSummary() {
+  const players = [...(summaryMatch ? summaryMatch.players || [] : summarySeason.players || [])].sort((a, b) => (num(b.rating) ?? -Infinity) - (num(a.rating) ?? -Infinity));
+  const decimal = (value, digits) => { const n = num(value); return n === null ? '—' : n.toFixed(digits); };
+  const rows = players.map(player => {
+    const k = num(player.kills) ?? 0, d = num(player.deaths) ?? 0;
+    const hs = num(player.hsPercent);
+    return [player.nickname, player.role || '—', player.maps, `${k} - ${d}`, `${k - d > 0 ? '+' : ''}${k - d}`,
+      (k / Math.max(d, 1)).toFixed(2), decimal(player.adr, 1), hs === null ? '—' : `${hs.toFixed(1)}%`, decimal(player.rating, 2)];
+  });
+  const title = summaryMatch ? `${CARD_TEAM_NAME} vs ${summaryMatch.opponent || 'Соперник'}` : `${summarySeason.name} · ИТОГИ СЕЗОНА`;
+  $('seasonResults').innerHTML = seasonCard(0, title,
+    ['Игрок', 'Роль', 'Карты', 'K - D', '+/-', 'K/D', 'ADR', 'HS%', 'Rating'], rows, summaryMatch, summaryMatch ? null : summarySeason.teamStats);
+}
+
+function runSummary() {
+  summarySeason = summarySeasons.find(season => season.id === $('seasonSummarySelect').value);
+  if (!summarySeason) return setSeasonStatus('Загрузите сезоны ESEA и выберите сезон.', true);
+  seasonData = null;
+  summaryMatch = null;
+  renderSummary();
+  setSeasonStatus(summarySeason.players?.length ? '✅ Карточка сезона готова.' : 'Карточка создана, но статистика игроков отсутствует.', !summarySeason.players?.length);
+}
+
+function runMatchSummary() {
+  const season = summarySeasons.find(item => item.id === $('seasonSummarySelect').value);
+  if (!season) return setSeasonStatus('Загрузите сезоны ESEA и выберите сезон.', true);
+  const match = season.matches?.find(item => item.id === $('seasonMatchSelect').value);
+  if (!match) return setSeasonStatus('Выберите матч для карточки.', true);
+  summarySeason = season;
+  summaryMatch = match;
+  seasonData = null;
+  renderSummary();
+  setSeasonStatus(match.players?.length ? '✅ Карточка матча готова.' : 'Карточка создана, но статистика игроков для этого матча отсутствует.', !match.players?.length);
+}
+
 async function loadEseaMatches() {
   const button = $('seasonLoadEsea');
   button.disabled = true;
@@ -339,6 +426,7 @@ async function runSeason() {
   if (!ok.length) {
     return setSeasonStatus(`Не нашёл завершённых матчей с командой ${CARD_TEAM_NAME} в этой выборке.`, true);
   }
+  summarySeason = null;
   seasonData = { ...aggregate(ok.map(r => r.data)), rosterIds: seasonRosterIds };
   renderSeason();
   const notes = [
@@ -376,6 +464,7 @@ async function saveSeasonLogo() {
   try {
     await storeImage(file, url => setTeamLogo(TEAM_ID, url));
     if (seasonData) renderSeason();
+    else if (summarySeason) renderSummary();
     setSeasonStatus('✅ Логотип команды сохранён!');
   } catch (e) {
     setSeasonStatus(e.message, true);
@@ -383,6 +472,10 @@ async function saveSeasonLogo() {
 }
 
   $('seasonLoadEsea').onclick = loadEseaMatches;
+  $('seasonSummaryLoad').onclick = loadSummarySeasons;
+  $('seasonSummaryRun').onclick = runSummary;
+  $('seasonSummarySelect').addEventListener('change', updateSummaryMatches);
+  $('seasonMatchRun').onclick = runMatchSummary;
   panel.querySelector('#seasonRun').onclick = runSeason;
   $('seasonLogoBtn').onclick = () => $('seasonLogoFile').click();
   $('seasonLogoFile').onchange = saveSeasonLogo;
