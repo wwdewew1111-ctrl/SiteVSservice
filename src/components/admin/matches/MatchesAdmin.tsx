@@ -11,6 +11,8 @@ import { MatchScoreEditor } from './MatchScoreEditor';
 import { FaceitSources } from './FaceitSources';
 import type { Match } from '@/types';
 
+const DEFAULT_STREAM_URL = 'https://www.twitch.tv/babaklawa';
+
 function createBlankMatch(): Match {
   return {
     id: createId(),
@@ -20,7 +22,7 @@ function createBlankMatch(): Match {
     opponentLogo: '',
     teamLogo: '',
     startsAt: '',
-    streamUrl: '',
+    streamUrl: DEFAULT_STREAM_URL,
     format: 'bo1',
     phase: 'upcoming',
     maps: [],

@@ -18,14 +18,23 @@ const TABS: { value: MatchTab; label: string }[] = [
 export function MatchesSection() {
   const { data, sectionStatus, loadSection } = useSite();
   const [tab, setTab] = useState<MatchTab>('active');
+  const [archiveTournament, setArchiveTournament] = useState('');
   const { ref, status, retry } = useLazySection('matches');
   const currentStatus = tab === 'archive' ? sectionStatus.archive : status;
   useEffect(() => {
     if (tab === 'archive' && sectionStatus.archive === 'idle') void loadSection('archive');
   }, [tab, sectionStatus.archive, loadSection]);
 
+  const archivedMatches = data.matches.filter((match) => match.isArchived);
+  const tournaments = [...new Set(archivedMatches.map((match) => match.tournament.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+  const selectedTournament = archiveTournament === '__all__' || tournaments.includes(archiveTournament)
+    ? archiveTournament
+    : tournaments[0] || (archivedMatches.length > 0 ? '__all__' : '');
   const visibleMatches = data.matches
-    .filter((match) => (tab === 'archive' ? match.isArchived : !match.isArchived))
+    .filter((match) => {
+      if (tab !== 'archive') return !match.isArchived;
+      return match.isArchived && (selectedTournament === '__all__' || match.tournament.trim() === selectedTournament);
+    })
     .sort((a, b) => Number(b.phase === 'live') - Number(a.phase === 'live'));
 
   return (
@@ -57,6 +66,21 @@ export function MatchesSection() {
           })}
         </div>
 
+        {tab === 'archive' && currentStatus === 'loaded' && tournaments.length > 0 && (
+          <div className="mb-8 flex flex-col gap-2 sm:max-w-xl">
+            <label htmlFor="archive-tournament" className="text-sm font-semibold text-text">Турнир в архиве</label>
+            <select
+              id="archive-tournament"
+              value={selectedTournament}
+              onChange={(event) => setArchiveTournament(event.target.value)}
+              className="input"
+            >
+              {tournaments.map((tournament) => <option key={tournament} value={tournament}>{tournament}</option>)}
+              <option value="__all__">Отображать все матчи</option>
+            </select>
+          </div>
+        )}
+
         {currentStatus !== 'loaded' ? (
           <SectionStatus status={currentStatus} onRetry={tab === 'archive' ? () => void loadSection('archive') : retry} />
         ) : visibleMatches.length === 0 ? (
@@ -78,6 +102,7 @@ export function MatchesSection() {
 function MatchCard({ match }: { match: Match }) {
   const live = match.phase === 'live';
   const finished = !live && isMatchFinished(match);
+  const streamUrl = match.streamUrl || (!match.isArchived && !finished ? 'https://www.twitch.tv/babaklawa' : '');
 
   return (
     <article className="flex min-w-0 flex-col gap-6 rounded-xl border border-border bg-card p-6 transition duration-300 hover:-translate-y-1 hover:border-accent hover:shadow-[0_18px_40px_-18px_rgba(255,30,30,0.55)]">
@@ -105,7 +130,7 @@ function MatchCard({ match }: { match: Match }) {
 
       {match.maps.length > 0 && <MapResults maps={match.maps} />}
 
-      {(match.startsAt || match.streamUrl) && (
+      {(match.startsAt || streamUrl) && (
         <div className="mt-auto flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
           {match.startsAt && (
             <p className="flex items-center gap-2 text-sm font-medium text-muted">
@@ -113,9 +138,9 @@ function MatchCard({ match }: { match: Match }) {
               <time dateTime={match.startsAt}>{formatMatchDateTime(match.startsAt)}</time>
             </p>
           )}
-          {match.streamUrl && (
+          {streamUrl && (
             <a
-              href={match.streamUrl}
+              href={streamUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-md border border-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-accent transition duration-200 hover:bg-accent hover:text-white"
