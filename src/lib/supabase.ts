@@ -5,12 +5,19 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const authStorageKey = 'kab6anbl-admin-project';
 const READ_TIMEOUT_MS = 12_000;
 const READ_RETRY_DELAYS_MS = [500, 1_500];
+const useProxy = import.meta.env.VITE_SUPABASE_PROXY === 'true' && typeof window !== 'undefined';
+const proxyBase = useProxy ? `${window.location.origin}/supabase-proxy.php` : '';
+export const usesSupabaseProxy = useProxy;
 
 // Bound only Data API reads; retrying writes could repeat an admin action.
 const fetchWithReadRetry: typeof fetch = async (input, init) => {
   const request = new Request(input, init);
-  const isDataRead = request.method === 'GET' && new URL(request.url).pathname.startsWith('/rest/v1/');
+  const requestUrl = new URL(request.url);
+  const isDataRead = request.method === 'GET' && requestUrl.pathname.startsWith('/rest/v1/');
   if (!isDataRead) return fetch(request);
+  const target = useProxy && requestUrl.origin === new URL(url).origin
+    ? new Request(`${proxyBase}${requestUrl.pathname}${requestUrl.search}`, request)
+    : request;
 
   for (let attempt = 0; ; attempt += 1) {
     const controller = new AbortController();
@@ -20,7 +27,7 @@ const fetchWithReadRetry: typeof fetch = async (input, init) => {
     const timeout = setTimeout(() => controller.abort(), READ_TIMEOUT_MS);
 
     try {
-      const response = await fetch(request.clone(), { signal: controller.signal });
+      const response = await fetch(target.clone(), { signal: controller.signal });
       if (response.ok || ![502, 503, 504].includes(response.status) || attempt >= READ_RETRY_DELAYS_MS.length) {
         return response;
       }
@@ -51,6 +58,6 @@ export const supabase = url && anonKey
   ? createClient(url, anonKey, { auth: { persistSession: false }, global: { fetch: fetchWithReadRetry } })
   : null;
 
-export const SUPABASE_FUNCTIONS_URL = url ? `${url}/functions/v1` : '';
+export const SUPABASE_FUNCTIONS_URL = url ? `${useProxy ? proxyBase : url}/functions/v1` : '';
 export const SUPABASE_ANON_KEY = anonKey ?? '';
 export const isSupabaseConfigured = Boolean(url && anonKey);

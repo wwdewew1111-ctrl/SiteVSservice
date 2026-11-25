@@ -16,7 +16,8 @@ TARGET=$(cd -P -- "$TARGET" && pwd -P) || fail 'Не удалось открыт
 printf 'Скачиваем готовую сборку из GitHub...\n'
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/sitevsservice.XXXXXXXX") || fail 'Не удалось создать временную папку.'
 trap 'rm -rf -- "$WORK"' EXIT HUP INT TERM
-git clone --quiet --depth 1 --branch main "$REPO_URL" "$WORK/repo" || fail 'Не удалось скачать репозиторий.'
+REF=${SITE_REF:-main}
+git clone --quiet --depth 1 --branch "$REF" "$REPO_URL" "$WORK/repo" || fail 'Не удалось скачать репозиторий или указанную версию.'
 SOURCE="$WORK/repo/reg-ru-site"
 [ -f "$SOURCE/index.html" ] && [ -f "$SOURCE/.htaccess" ] && [ -d "$SOURCE/assets" ] || fail 'В репозитории нет готовой сборки reg-ru-site.'
 

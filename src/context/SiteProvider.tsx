@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { SiteContext, type SectionStatus, type SiteActions, type SiteContextValue, type SiteSection } from './siteStore';
 import { getAdminToken } from '@/lib/adminAuth';
 import { ApiError, deleteRow, fetchSiteData, fetchSiteSection, reorderRows, upsertRow } from '@/lib/siteApi';
-import { supabase } from '@/lib/supabase';
+import { supabase, usesSupabaseProxy } from '@/lib/supabase';
 import {
   matchFromRow,
   matchToRow,
@@ -142,7 +142,41 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, [isAdmin, loadSection]);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!usesSupabaseProxy || isAdmin) return;
+    let active = true;
+    let refreshing = false;
+    const refreshMatches = async () => {
+      if (refreshing || document.visibilityState !== 'visible' || sectionStatusRef.current.matches !== 'loaded') return;
+      refreshing = true;
+      const requestGeneration = generation.current;
+      const sections: SiteSection[] = sectionStatusRef.current.archive === 'loaded' ? ['matches', 'archive'] : ['matches'];
+      try {
+        const results = await Promise.all(sections.map((section) => fetchSiteSection(section)));
+        if (!active || requestGeneration !== generation.current) return;
+        setData((current) => {
+          const matches = results[0].matches ?? [];
+          const activeIds = new Set(matches.map((match) => match.id));
+          const archived = sections.length === 2 ? results[1].matches ?? [] : current.matches.filter((match) => match.isArchived);
+          return { ...current, matches: [...archived.filter((match) => !activeIds.has(match.id)), ...matches] };
+        });
+      } catch (error) {
+        console.error('Failed to refresh matches', error);
+      } finally {
+        refreshing = false;
+      }
+    };
+    const timer = window.setInterval(() => void refreshMatches(), 30_000);
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void refreshMatches(); };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!supabase || usesSupabaseProxy) return;
     const channel = supabase
       .channel('public-matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
